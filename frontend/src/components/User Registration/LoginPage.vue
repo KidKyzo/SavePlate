@@ -1,231 +1,426 @@
-<template>
-    <div class="login-container">
-    <!-- Left Side: Empty for your own image -->
-    <div class="login-left">
-      <!-- Add your image or content here -->
-    </div>
-    <!-- Right Side: Login Form -->
-    <div class="login-right">
-      <!-- Logo Area (separate from form) -->
-      <div class="logo">
-        <img src="@/assets/Save Plate Logo.png" width="350" height="130" alt="Save Plate Logo" />
-      </div>
+<script setup>
+import { ref } from 'vue'
 
-      <div class="form-wrapper">
-        <p class="subtitle">Login into your account</p>
-        <form @submit.prevent>
-          <div class="input-group">
-            <label for="email">Email :</label>
-            <div class="input-container">
-              <input type="email" id="email" placeholder="adribabi.com" />
-              <span class="icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                  <polyline points="22,6 12,13 2,6"></polyline>
+const emit = defineEmits(['go-register'])
+
+const email       = ref('')
+const password    = ref('')
+const showPass    = ref(false)
+const isLoading   = ref(false)
+
+const handleLogin = async () => {
+  isLoading.value = true
+  await new Promise((r) => setTimeout(r, 1500))
+  isLoading.value = false
+  // TODO: call login API
+}
+</script>
+
+
+<template>
+  <div class="page">
+
+    <!-- LEFT PANEL -->
+    <div class="panel-left">
+      <div class="panel-content">
+        <div class="badge">🛡️ Reduce Food Waste</div>
+        <h1>Save food.<br />Save the planet.</h1>
+        <p>Join thousands of people reducing food waste and making a difference — one plate at a time.</p>
+
+        <ul class="feature-list">
+          <li>📍 Rescue surplus food near you</li>
+          <li>📦 Track your food inventory</li>
+          <li>📊 View your savings analytics</li>
+        </ul>
+
+        <div class="stats">
+          <div class="stat">
+            <strong>12,480+</strong>
+            <span>Meals Saved</span>
+          </div>
+          <div class="stat">
+            <strong>3.2 tons</strong>
+            <span>CO₂ Reduced</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel-right">
+      <div class="form-card">
+
+        <div class="logo">
+          <img src="@/assets/Save Plate Logo.png" width="180" height="67" alt="SavePlate Logo" />
+        </div>
+
+        <h2>Welcome back</h2>
+        <p class="subtitle">Login into your account to continue</p>
+
+        <form @submit.prevent="handleLogin" novalidate>
+
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              v-model="email"
+              placeholder="your@email.com"
+              autocomplete="email"
+            />
+          </div>
+
+          <div class="field">
+            <label for="login-password">Password</label>
+            <div class="password-wrap">
+              <input
+                id="login-password"
+                :type="showPass ? 'text' : 'password'"
+                v-model="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+              />
+              <button type="button" class="toggle-btn" @click="showPass = !showPass" :aria-label="showPass ? 'Hide password' : 'Show password'">
+                <!-- Eye open -->
+                <svg v-if="!showPass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
                 </svg>
-              </span>
+                <!-- Eye closed -->
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
             </div>
           </div>
-          <div class="input-group">
-            <label for="password">Password :</label>
-            <div class="input-container">
-              <input type="password" id="password" placeholder="NIGGA123" />
-              <span class="icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </span>
-            </div>
-          </div>
-          <div class="forgot-password">
+
+          <div class="forgot">
             <a href="#">Forgot password?</a>
           </div>
-          <button type="submit" class="btn-login"> Login now </button>
-          
+
+          <button type="submit" id="btn-login" class="btn-primary" :disabled="isLoading">
+            {{ isLoading ? 'Logging in...' : 'Login Now' }}
+          </button>
+
         </form>
-        <div class="divider">
-          <span>OR</span>
-        </div>
-        <button type="button" class="btn-signup">Signup now</button>
+
+        <div class="divider"><span>OR</span></div>
+
+        <button type="button" id="btn-signup" class="btn-secondary" @click="emit('go-register')">
+          Don't have an account? <strong>Sign up</strong>
+        </button>
+
       </div>
     </div>
+
   </div>
 </template>
 
-<style>
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-.login-container {
-  display: flex;
-  min-height: 100vh;
-  width: 100%;
-  font-family: "Inter", sans-serif;
-  background-color: #ffffff;
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-.login-left {
-  flex: 1.5;
-  background-color: #f8fafc;
+
+/* ── Page layout ── */
+.page {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Left panel ── */
+.panel-left {
+  flex: 1.3;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Add border or shadow here if you want separation */
+  padding: 3rem;
+  background: linear-gradient(155deg, #0b3a0c 0%, #1b7320 50%, #29a830 100%);
+  color: white;
 }
-.login-right {
-  flex: 1;
+
+.panel-content {
+  max-width: 420px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 16px;
+  margin-bottom: 1.75rem;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.panel-content h1 {
+  font-size: 2.8rem;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.panel-content p {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 2rem;
+}
+
+.feature-list {
+  list-style: none;
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.feature-list li {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.85);
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.feature-list li:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.stats {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat strong {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.stat span {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Right panel ── */
+.panel-right {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  gap: 26px;
+  background: #f6f8f6;
 }
+
+.form-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 2.5rem 2rem;
+  background: #fff;
+  border: 1px solid #e8ede8;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+
 .logo {
   display: flex;
-  align-items: center;
   justify-content: center;
+  margin-bottom: 1.25rem;
 }
-.form-wrapper {
-  width: 100%;
-  max-width: 750px;
-  margin-bottom: 100px;
+
+.form-card h2 {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  text-align: center;
+  margin-bottom: 0.35rem;
 }
+
 .subtitle {
   text-align: center;
-  color: #666;
-  font-size: 1.1rem;
-  font-weight: 600;
+  color: #7a8a7a;
+  font-size: 0.88rem;
+  margin-bottom: 1.75rem;
 }
-.input-group {
-  margin-bottom: 22px;
+
+/* ── Fields ── */
+.field {
+  margin-bottom: 1.1rem;
 }
-.input-group label {
+
+.field label {
   display: block;
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 8px;
-  font-weight: 500;
+  margin-bottom: 6px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #4a5a4a;
 }
-.input-container {
-  display: flex;
-  align-items: stretch;
-  background-color: #f0f2f5;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid transparent;
-  transition: all 0.3s ease;
-}
-.input-container:focus-within {
-  border-color: #2da12b;
-  box-shadow: 0 0 0 3px rgba(45, 161, 43, 0.1);
-  background-color: #fff;
-}
-.input-container input {
-  flex: 1;
-  padding: 14px 16px;
-  border: none;
-  background: transparent;
-  font-size: 0.95rem;
-  color: #333;
+
+.field input,
+.password-wrap input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e0e8e0;
+  border-radius: 10px;
+  background: #f3f6f3;
+  font-size: 0.93rem;
+  font-family: 'Inter', sans-serif;
+  color: #1a1a1a;
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.input-container input::placeholder {
-  color: #999;
+
+.password-wrap input {
+  padding-right: 44px;
 }
-.icon-wrapper {
+
+.field input:focus,
+.password-wrap input:focus {
+  border-color: #2da12b;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(45,161,43,0.1);
+}
+
+/* ── Password with show/hide ── */
+.password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-btn {
+  position: absolute;
+  right: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  background-color: #2da12b;
-  color: white;
-  border-radius: 4px;
-  margin: 3px;
-  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #9aaa9a;
+  cursor: pointer;
+  transition: color 0.2s;
 }
-.icon-wrapper svg {
-  width: 20px;
-  height: 20px;
-}
-.forgot-password {
-  margin-bottom: 24px;
-}
-.forgot-password a {
+
+.toggle-btn:hover {
   color: #2da12b;
+}
+
+.toggle-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Forgot ── */
+.forgot {
+  text-align: right;
+  margin-bottom: 1.4rem;
+}
+
+.forgot a {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2da12b;
+  text-decoration: none;
+}
+
+.forgot a:hover {
   text-decoration: underline;
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: color 0.3s;
 }
-.forgot-password a:hover {
-  color: #217d20;
-}
-.btn-login {
+
+/* ── Buttons ── */
+.btn-primary {
   width: 100%;
-  padding: 14px;
-  background-color: #2da12b;
+  padding: 13px;
+  background: linear-gradient(135deg, #2da12b, #3dc43b);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: 10px;
+  font-size: 0.97rem;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition:
-    background-color 0.3s,
-    transform 0.1s;
-  box-shadow: 0 4px 14px rgba(45, 161, 43, 0.15);
+  box-shadow: 0 4px 16px rgba(45,161,43,0.3);
+  transition: opacity 0.2s, transform 0.15s;
 }
-.btn-login:hover {
-  background-color: #258c23;
-  box-shadow: 0 6px 18px rgba(45, 161, 43, 0.2);
+
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
-.btn-login:active {
-  transform: scale(0.98);
+
+.btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
+
 .divider {
   display: flex;
   align-items: center;
-  text-align: center;
-  margin: 28px 0;
-  color: #bbb;
-  font-size: 0.85rem;
+  margin: 1.4rem 0 1.2rem;
+  color: #c0ccc0;
+  font-size: 0.8rem;
 }
+
 .divider::before,
 .divider::after {
-  content: "";
+  content: '';
   flex: 1;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e8ede8;
 }
-.divider span {
-  padding: 0 16px;
-}
-.btn-signup {
+
+.divider span { padding: 0 12px; }
+
+.btn-secondary {
   width: 100%;
-  padding: 14px;
-  background-color: #ffffff;
-  color: #2da12b;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: 12px;
+  background: transparent;
+  color: #4a5a4a;
+  border: 1.5px solid #e0e8e0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s, background 0.2s;
 }
-.btn-signup:hover {
+
+.btn-secondary strong { color: #2da12b; }
+
+.btn-secondary:hover {
   border-color: #2da12b;
-  background-color: rgba(45, 161, 43, 0.03);
+  background: rgba(45,161,43,0.04);
 }
-.btn-signup:active {
-  transform: scale(0.98);
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .panel-left { display: none; }
+  .panel-right { background: #fff; }
 }
-@media (max-width: 800px) {
-  .login-container {
-    flex-direction: column;
-  }
-  .login-left {
-    display: none;
-  }
+
+@media (max-width: 480px) {
+  .form-card { padding: 2rem 1.25rem; border-radius: 16px; }
 }
 </style>
