@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-const emit = defineEmits(['go-login'])
+const emit = defineEmits(['go-login', 'register-success'])
 
 const fullName    = ref('')
 const email       = ref('')
@@ -42,7 +42,8 @@ const handleRegister = async () => {
   isLoading.value = true
   await new Promise((r) => setTimeout(r, 1800))
   isLoading.value = false
-  // TODO: call register API
+  // TODO: call register API — emitting success for prototype demo
+  emit('register-success')
 }
 </script>
 
