@@ -134,94 +134,114 @@ const handleLogin = async () => {
   display: flex;
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
+  background-color: #f8fafc; /* Lighter background for the whole page */
 }
 
 /* ── Left panel ── */
 .panel-left {
-  flex: 1.3;
+  flex: 1.2;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  background: linear-gradient(155deg, #0b3a0c 0%, #1b7320 50%, #29a830 100%);
+  background: linear-gradient(135deg, #047857 0%, #15803d 100%); /* Clean, modern emerald gradient */
   color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle background circles for a premium feel */
+.panel-left::before, .panel-left::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+}
+.panel-left::before {
+  width: 500px;
+  height: 500px;
+  top: -150px;
+  left: -150px;
+}
+.panel-left::after {
+  width: 400px;
+  height: 400px;
+  bottom: -100px;
+  right: -50px;
 }
 
 .panel-content {
-  max-width: 420px;
+  max-width: 440px;
+  position: relative;
+  z-index: 10;
 }
 
 .badge {
   display: inline-block;
-  padding: 6px 16px;
-  margin-bottom: 1.75rem;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
+  padding: 8px 16px;
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
+  backdrop-filter: blur(4px);
 }
 
 .panel-content h1 {
-  font-size: 2.8rem;
-  font-weight: 900;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-  margin-bottom: 1rem;
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 1.25rem;
 }
 
 .panel-content p {
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: rgba(255,255,255,0.7);
-  margin-bottom: 2rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 2.5rem;
 }
 
 .feature-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
 }
 
 .feature-list li {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.85);
-  padding: 8px 12px;
-  border-radius: 10px;
-  transition: background 0.2s;
-}
-
-.feature-list li:hover {
-  background: rgba(255,255,255,0.08);
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .stats {
   display: flex;
-  gap: 1rem;
+  gap: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid rgba(255,255,255,0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .stat strong {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 800;
 }
 
 .stat span {
-  font-size: 0.72rem;
-  color: rgba(255,255,255,0.5);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.5px;
 }
 
 /* ── Right panel ── */
@@ -231,76 +251,74 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: #f6f8f6;
 }
 
 .form-card {
   width: 100%;
-  max-width: 420px;
-  padding: 2.5rem 2rem;
+  max-width: 440px;
+  padding: 3rem 2.5rem;
   background: #fff;
-  border: 1px solid #e8ede8;
-  border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  border-radius: 24px; /* Softer, larger borders */
+  box-shadow: 0 12px 32px rgba(0,0,0,0.05); /* Modern, subtle shadow */
 }
 
 .logo {
   display: flex;
   justify-content: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-card h2 {
-  font-size: 1.55rem;
+  font-size: 1.75rem;
   font-weight: 800;
-  color: #1a1a1a;
+  color: #0f172a; /* Darker slate color */
   text-align: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
 }
 
 .subtitle {
   text-align: center;
-  color: #7a8a7a;
-  font-size: 0.88rem;
-  margin-bottom: 1.75rem;
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
 }
 
 /* ── Fields ── */
 .field {
-  margin-bottom: 1.1rem;
+  margin-bottom: 1.25rem;
 }
 
 .field label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 0.83rem;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #4a5a4a;
+  color: #334155;
 }
 
 .field input,
 .password-wrap input {
   width: 100%;
-  padding: 12px 14px;
-  border: 1.5px solid #e0e8e0;
-  border-radius: 10px;
-  background: #f3f6f3;
-  font-size: 0.93rem;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 0.95rem;
   font-family: 'Inter', sans-serif;
-  color: #1a1a1a;
+  color: #0f172a;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.2s ease;
 }
 
 .password-wrap input {
-  padding-right: 44px;
+  padding-right: 48px;
 }
 
 .field input:focus,
 .password-wrap input:focus {
-  border-color: #2da12b;
+  border-color: #10b981;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(45,161,43,0.1);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); /* Nice focus ring */
 }
 
 /* ── Password with show/hide ── */
@@ -312,22 +330,23 @@ const handleLogin = async () => {
 
 .toggle-btn {
   position: absolute;
-  right: 4px;
+  right: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
-  color: #9aaa9a;
+  color: #94a3b8;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color 0.2s, background 0.2s;
 }
 
 .toggle-btn:hover {
-  color: #2da12b;
+  color: #10b981;
+  background: #f1f5f9;
 }
 
 .toggle-btn svg {
@@ -338,90 +357,98 @@ const handleLogin = async () => {
 /* ── Forgot ── */
 .forgot {
   text-align: right;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.75rem;
 }
 
 .forgot a {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #2da12b;
+  color: #10b981;
   text-decoration: none;
+  transition: color 0.2s;
 }
 
 .forgot a:hover {
-  text-decoration: underline;
+  color: #059669;
 }
 
 /* ── Buttons ── */
 .btn-primary {
   width: 100%;
-  padding: 13px;
-  background: linear-gradient(135deg, #2da12b, #3dc43b);
+  padding: 14px;
+  background: #10b981; /* Solid attractive green */
   color: white;
   border: none;
-  border-radius: 10px;
-  font-size: 0.97rem;
-  font-weight: 700;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(45,161,43,0.3);
-  transition: opacity 0.2s, transform 0.15s;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.92;
-  transform: translateY(-1px);
+  background: #059669; /* Darker green on hover */
+  transform: translateY(-2px); /* Slight lift */
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .btn-primary:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .divider {
   display: flex;
   align-items: center;
-  margin: 1.4rem 0 1.2rem;
-  color: #c0ccc0;
-  font-size: 0.8rem;
+  margin: 1.5rem 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
 }
 
 .divider::before,
 .divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid #e8ede8;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .divider span { padding: 0 12px; }
 
 .btn-secondary {
   width: 100%;
-  padding: 12px;
-  background: transparent;
-  color: #4a5a4a;
-  border: 1.5px solid #e0e8e0;
-  border-radius: 10px;
-  font-size: 0.9rem;
+  padding: 14px;
+  background: #fff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: all 0.2s ease;
 }
 
-.btn-secondary strong { color: #2da12b; }
+.btn-secondary strong { 
+  color: #10b981; 
+  font-weight: 600;
+}
 
 .btn-secondary:hover {
-  border-color: #2da12b;
-  background: rgba(45,161,43,0.04);
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 
 /* ── Responsive ── */
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .panel-left { display: none; }
-  .panel-right { background: #fff; }
-}
-
-@media (max-width: 480px) {
-  .form-card { padding: 2rem 1.25rem; border-radius: 16px; }
+  .page { background: #fff; }
+  .panel-right { padding: 1rem; }
+  .form-card { box-shadow: none; padding: 2rem 1rem; }
 }
 </style>

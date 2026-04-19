@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import LoginPage    from '@/components/User Registration/LoginPage.vue'
 import RegisterPage from '@/components/User Registration/RegisterPage.vue'
 import Dashboard    from '@/components/Menu/Dashboard.vue'
+import Inventory    from '@/components/Menu/Inventory.vue'
 import Notification from '@/components/Menu/Notification.vue'
 import MealPlanner  from '@/components/Menu/MealPlanner.vue'
 import BrowseFood   from '@/components/Menu/BrowseFood.vue'
@@ -29,6 +30,7 @@ function onRegister() {
   <!-- ── Authenticated app ── -->
   <template v-if="isLoggedIn">
     <Dashboard    v-if="currentPage === 'dashboard'"          @navigate="currentPage = $event" />
+    <Inventory    v-else-if="currentPage === 'inventory'"     @navigate="currentPage = $event" />
     <Notification v-else-if="currentPage === 'notifications'" @navigate="currentPage = $event" />
     <MealPlanner  v-else-if="currentPage === 'meal-planner'"  @navigate="currentPage = $event" />
     <BrowseFood   v-else-if="currentPage === 'browse'"        @navigate="currentPage = $event" />
