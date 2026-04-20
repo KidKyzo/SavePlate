@@ -524,7 +524,6 @@ function setFilter(f) {
 @media (max-width: 860px) {
   /* Header: account for mobile topbar height */
   .notif-header {
-    top: 56px;
     padding: 0.9rem 1rem 0;
     gap: 0;
   }
