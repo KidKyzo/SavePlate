@@ -28,8 +28,9 @@ function onRegister() {
 </script>
 
 <template>
-  <!-- ── Authenticated app ── -->
-  <template v-if="isLoggedIn">
+  <div id="app-root">
+    <!-- ── Authenticated app ── -->
+    <template v-if="isLoggedIn">
     <Dashboard    v-if="currentPage === 'dashboard'"          @navigate="currentPage = $event" />
     <Inventory    v-else-if="currentPage === 'inventory'"     @navigate="currentPage = $event" />
     <Notification v-else-if="currentPage === 'notifications'" @navigate="currentPage = $event" />
@@ -61,7 +62,8 @@ function onRegister() {
       @go-login="authView = 'login'"
       @register-success="onRegister"
     />
-  </template>
+    </template>
+  </div>
 </template>
 
 <style scoped>
