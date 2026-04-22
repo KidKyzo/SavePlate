@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const emit = defineEmits(['go-register', 'login-success'])
 
@@ -7,12 +7,29 @@ const email       = ref('')
 const password    = ref('')
 const showPass    = ref(false)
 const isLoading   = ref(false)
+const submitted   = ref(false)  // tracks whether user tried to submit
+
+// ── Email regex validation ────────────────────────────────
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const emailError = computed(() => {
+  if (!submitted.value) return ''
+  if (!email.value.trim()) return 'Email address is required.'
+  if (!emailRegex.test(email.value.trim())) return 'Please enter a valid email address.'
+  return ''
+})
+
+const passwordError = computed(() =>
+  submitted.value && !password.value ? 'Password is required.' : ''
+)
 
 const handleLogin = async () => {
+  submitted.value = true
+  if (emailError.value || passwordError.value) return
   isLoading.value = true
   await new Promise((r) => setTimeout(r, 1500))
   isLoading.value = false
-  // TODO: call login API — emitting success for prototype demo
+  // TODO: POST /api/auth/login — emitting success for prototype demo
   emit('login-success')
 }
 </script>
@@ -68,7 +85,9 @@ const handleLogin = async () => {
               v-model="email"
               placeholder="your@email.com"
               autocomplete="email"
+              :class="{ 'input-error': emailError }"
             />
+            <p v-if="emailError" class="error-text">{{ emailError }}</p>
           </div>
 
           <div class="field">
@@ -80,6 +99,7 @@ const handleLogin = async () => {
                 v-model="password"
                 placeholder="Enter your password"
                 autocomplete="current-password"
+                :class="{ 'input-error': passwordError }"
               />
               <button type="button" class="toggle-btn" @click="showPass = !showPass" :aria-label="showPass ? 'Hide password' : 'Show password'">
                 <!-- Eye open -->
@@ -95,6 +115,7 @@ const handleLogin = async () => {
                 </svg>
               </button>
             </div>
+            <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
           </div>
 
           <div class="forgot">
@@ -389,8 +410,8 @@ const handleLogin = async () => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #059669; /* Darker green on hover */
-  transform: translateY(-2px); /* Slight lift */
+  background: #059669;
+  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
 }
 
@@ -402,6 +423,19 @@ const handleLogin = async () => {
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* ── Inline error messages ── */
+.input-error {
+  border-color: #ef4444 !important;
+  background: #fff5f5 !important;
+}
+
+.error-text {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #ef4444;
+  font-weight: 500;
 }
 
 .divider {

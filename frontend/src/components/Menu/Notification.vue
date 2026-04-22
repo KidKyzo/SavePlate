@@ -1,8 +1,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
+import { useNotifications } from '@/composables/useNotifications'
+import { useToast }         from '@/composables/useToast'
 
 const emit = defineEmits(['navigate'])
+
+// ── Shared notification store ──
+const { notifications, unreadCount, markRead: markReadShared, markAllRead: markAllReadShared } = useNotifications()
+const { showToast } = useToast()
 
 // ── Types config ──
 const TYPE_CONFIG = {
@@ -11,22 +17,6 @@ const TYPE_CONFIG = {
   meal:      { label: 'Meal Reminder',   icon: '🍽️', color: '#3b82f6', bg: '#eff6ff' },
   account:   { label: 'Account Alert',   icon: '🔐', color: '#ef4444', bg: '#fef2f2' },
 }
-
-// ── Mock notifications ──
-const notifications = ref([
-  { id: 1,  type: 'inventory', message: 'Fresh Milk expires tomorrow. Use it or add to a meal.',          time: '2 hours ago',   isRead: false, link: 'inventory' },
-  { id: 2,  type: 'donation',  message: 'Your bread donation was claimed by another user.',              time: '5 hours ago',   isRead: false, link: 'browse'    },
-  { id: 3,  type: 'meal',      message: 'Reminder: You haven\'t planned lunch for Wednesday yet.',       time: 'Yesterday',     isRead: false, link: 'meal-planner' },
-  { id: 4,  type: 'account',   message: 'New login detected from Chrome on Windows at 10:42 PM.',       time: 'Yesterday',     isRead: false, link: 'settings'  },
-  { id: 5,  type: 'inventory', message: 'Spinach is expiring in 2 days. Consider using it soon.',       time: '2 days ago',    isRead: false, link: 'inventory' },
-  { id: 6,  type: 'meal',      message: 'Your meal plan for this week has been confirmed.',              time: '2 days ago',    isRead: true,  link: 'meal-planner' },
-  { id: 7,  type: 'donation',  message: 'A new donation listing near you: 2kg brown rice.',             time: '3 days ago',    isRead: true,  link: 'browse'    },
-  { id: 8,  type: 'inventory', message: 'Greek Yogurt expires in 3 days. Plan a recipe?',               time: '3 days ago',    isRead: true,  link: 'inventory' },
-  { id: 9,  type: 'account',   message: 'Your password was successfully changed.',                       time: '4 days ago',    isRead: true,  link: 'settings'  },
-  { id: 10, type: 'meal',      message: 'Meal reminder: Use your near-expiry tomatoes in tonight\'s dinner.', time: '4 days ago', isRead: true, link: 'meal-planner' },
-  { id: 11, type: 'donation',  message: 'Donation claim successful — pick up by Saturday.',             time: '5 days ago',    isRead: true,  link: 'browse'    },
-  { id: 12, type: 'inventory', message: '3 items in your inventory have expired and should be removed.','time': '6 days ago',   isRead: true,  link: 'inventory' },
-])
 
 // ── State ──
 const activeFilter  = ref('all')   // 'all' | type key
@@ -41,30 +31,36 @@ const prefToggles = ref({
 })
 
 // ── Derived ──
-const unreadCount = computed(() => notifications.value.filter(n => !n.isRead).length)
-
+// Only show notifications whose type is enabled in preferences
 const filteredNotifications = computed(() => {
-  const list = activeFilter.value === 'all'
-    ? notifications.value
-    : notifications.value.filter(n => n.type === activeFilter.value)
+  let list = notifications.value.filter(n => prefToggles.value[n.type] !== false)
+  if (activeFilter.value !== 'all') {
+    list = list.filter(n => n.type === activeFilter.value)
+  }
   return list.slice(0, visibleCount.value)
 })
 
 const hasMore = computed(() => {
-  const total = activeFilter.value === 'all'
-    ? notifications.value.length
-    : notifications.value.filter(n => n.type === activeFilter.value).length
-  return visibleCount.value < total
+  let list = notifications.value.filter(n => prefToggles.value[n.type] !== false)
+  if (activeFilter.value !== 'all') {
+    list = list.filter(n => n.type === activeFilter.value)
+  }
+  return visibleCount.value < list.length
 })
 
 // ── Actions ──
 function markRead(id) {
   const n = notifications.value.find(n => n.id === id)
-  if (n) n.isRead = true
+  if (n && !n.isRead) {
+    markReadShared(id)
+    showToast('Notification marked as read', 'notification', '🔔')
+  }
 }
 
 function markAllRead() {
-  notifications.value.forEach(n => { n.isRead = true })
+  const hadUnread = unreadCount.value > 0
+  markAllReadShared()
+  if (hadUnread) showToast('All notifications marked as read', 'success', '✓')
 }
 
 function clickNotification(n) {
@@ -79,6 +75,11 @@ function loadMore() {
 function setFilter(f) {
   activeFilter.value = f
   visibleCount.value = 8
+}
+
+function savePreferences() {
+  showPrefModal.value = false
+  showToast('Notification preferences saved', 'success', '⚙️')
 }
 </script>
 
@@ -205,7 +206,7 @@ function setFilter(f) {
             </div>
           </div>
 
-          <button class="btn-save" @click="showPrefModal = false">Save Preferences</button>
+          <button class="btn-save" @click="savePreferences">Save Preferences</button>
         </div>
       </div>
     </Teleport>

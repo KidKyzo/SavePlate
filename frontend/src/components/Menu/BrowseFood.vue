@@ -1,11 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
+import { useNotifications } from '@/composables/useNotifications'
+import { useToast }         from '@/composables/useToast'
 
 const emit = defineEmits(['navigate'])
 
-// ── Current user (mock) ──
-const CURRENT_USER = 'Adrienne Kayana'
+const { unreadCount } = useNotifications()
+const { showToast }   = useToast()
 
 // ── Tab state ──
 const activeTab = ref('browse') // 'browse' | 'inventory'
@@ -27,6 +29,19 @@ const CATEGORIES = [
   { label: 'Bakery',     icon: '🍞', bg: '#fffbeb' },
   { label: 'Other',      icon: '🍱', bg: '#f8f8f8' },
 ]
+
+// ── Current user (simulated logged-in user) ──
+const CURRENT_USER = 'Adrienne Kayana'
+
+// ── Helper: compute days remaining from an ISO date string ──
+function computeDaysLeft(expiryDateStr) {
+  if (!expiryDateStr) return 0
+  const today  = new Date()
+  today.setHours(0, 0, 0, 0)
+  const expiry = new Date(expiryDateStr)
+  expiry.setHours(0, 0, 0, 0)
+  return Math.round((expiry - today) / (1000 * 60 * 60 * 24))
+}
 
 let nextId = 200
 
@@ -198,12 +213,19 @@ function urgencyLabel(daysLeft) {
   if (daysLeft === 1) return '1 day left'
   return `${daysLeft} days left`
 }
-function catIcon(category) {
-  return CATEGORIES.find(c => c.label === category)?.icon ?? '🍱'
-}
-function computeDaysLeft(expiryStr) {
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  return Math.ceil((new Date(expiryStr) - today) / 86400000)
+
+// ── Claim flow ──
+const claimedId   = ref(null)
+const claimingId  = ref(null)
+
+function claimItem(item) {
+  claimingId.value = item.id
+  setTimeout(() => {
+    item.claimed   = true
+    claimedId.value  = item.id
+    claimingId.value = null
+    showToast(`"${item.name}" claimed successfully! 🎉`, 'success', '✅')
+  }, 800)
 }
 
 // ─────────────────────────────────────────────────
@@ -333,13 +355,12 @@ function cancelClaim(item) {
 // ── SHARE TOGGLE (Inventory)
 // ─────────────────────────────────────────────────
 function toggleShare(item) {
-  const idx = myInventory.value.findIndex(i => i.id === item.id)
-  if (idx !== -1) {
-    myInventory.value[idx] = { ...myInventory.value[idx], shared: !myInventory.value[idx].shared }
-    if (detailItem.value?.id === item.id) {
-      detailItem.value = { ...detailItem.value, shared: myInventory.value[idx].shared }
-    }
-  }
+  item.shared = !item.shared
+  showToast(
+    item.shared ? `"${item.name}" is now shared for claiming` : `"${item.name}" removed from sharing`,
+    item.shared ? 'success' : 'warning',
+    item.shared ? '🤝' : '📦'
+  )
 }
 
 // ─────────────────────────────────────────────────
@@ -399,7 +420,7 @@ const selectedCatIcon = computed(() => {
 </script>
 
 <template>
-  <AppLayout current-page="browse" :unread-count="5" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="browse" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
     <div class="browse-page">
 
       <!-- ── Page Header ── -->
