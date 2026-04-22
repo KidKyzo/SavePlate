@@ -18,6 +18,15 @@ const navItems = [
   { id: 'settings',      label: 'Settings',      icon: '⚙️' },
 ]
 
+// Mobile bottom tabs: prioritised order
+const bottomNavItems = [
+  { id: 'inventory',     label: 'Inventory',     icon: '📦' },
+  { id: 'meal-planner',  label: 'Meal Planner',  icon: '📅' },
+  { id: 'browse',        label: 'Browse Food',   icon: '🔍' },
+  { id: 'notifications', label: 'Notifications', icon: '🔔' },
+  { id: 'dashboard',     label: 'Dashboard',     icon: '🏠' },
+]
+
 const userInitials = computed(() =>
   props.userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 )
@@ -198,7 +207,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
     <!-- ── MOBILE BOTTOM TAB BAR ── -->
     <nav class="bottom-tabs">
       <button
-        v-for="item in navItems.slice(0, 5)"
+        v-for="item in bottomNavItems"
         :key="item.id"
         class="tab-item"
         :class="{ active: currentPage === item.id }"

@@ -87,7 +87,7 @@ function setFilter(f) {
 
     <div class="notif-page">
 
-      <!-- ── Sticky header ── -->
+      <!-- ── Page Header ── -->
       <div class="notif-header">
         <div class="notif-title-row">
           <div>
@@ -214,20 +214,21 @@ function setFilter(f) {
 </template>
 
 <style scoped>
+/* ── Page shell — mirrors Dashboard/Analytics/BrowseFood ── */
 .notif-page {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  gap: 1.25rem;
 }
 
 /* ── Header ── */
 .notif-header {
-  position: sticky;
-  top: 0;
-  background: #f0f4f0;
-  z-index: 10;
-  padding: 1.75rem 2rem 0;
+  background: transparent;
   border-bottom: 1px solid #e8ede8;
+  padding-bottom: 0;
 }
 
 .notif-title-row {
@@ -308,11 +309,9 @@ function setFilter(f) {
 
 /* ── List ── */
 .notif-list {
-  padding: 1.25rem 2rem 2rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  max-width: 860px;
 }
 
 /* ── Empty state ── */
@@ -522,11 +521,7 @@ function setFilter(f) {
 
 /* ── Responsive ── */
 @media (max-width: 860px) {
-  /* Header: account for mobile topbar height */
-  .notif-header {
-    padding: 0.9rem 1rem 0;
-    gap: 0;
-  }
+  .notif-page { padding: 1rem; gap: 1rem; }
 
   /* Title row: stacks nicely */
   .notif-title-row {
@@ -572,7 +567,7 @@ function setFilter(f) {
   }
 
   /* List */
-  .notif-list   { padding: 0.85rem 1rem 5rem; gap: 0.5rem; }
+  .notif-list   { gap: 0.5rem; padding-bottom: 4rem; }
 
   /* Card: slightly more compact but still comfortable */
   .notif-card { border-radius: 12px; }
