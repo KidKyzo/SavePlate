@@ -1,21 +1,38 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useNotifications } from '@/composables/useNotifications'
+import { useToast }         from '@/composables/useToast'
 
 const props = defineProps({
   currentPage: { type: String, default: 'dashboard' },
-  unreadCount: { type: Number, default: 0 },
+  unreadCount: { type: Number, default: 0 },   // kept for API compat; badge uses composable
   userName:    { type: String, default: 'Adrienne' },
 })
 const emit = defineEmits(['navigate'])
 
+// ── Shared notification store ──
+const { notifications, unreadCount: sharedUnread, markRead } = useNotifications()
+
+// ── Global toast stack ──
+const { toasts, dismiss } = useToast()
+
 const navItems = [
   { id: 'dashboard',     label: 'Dashboard',    icon: '🏠' },
-  { id: 'notifications', label: 'Notifications', icon: '🔔' },
-  { id: 'meal-planner',  label: 'Meal Planner',  icon: '📅' },
   { id: 'inventory',     label: 'Inventory',     icon: '📦' },
+  { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'browse',        label: 'Browse Food',   icon: '🔍' },
+  { id: 'meal-planner',  label: 'Meal Planner',  icon: '📅' },
   { id: 'analytics',     label: 'Analytics',     icon: '📊' },
   { id: 'settings',      label: 'Settings',      icon: '⚙️' },
+]
+
+// Mobile bottom tabs: prioritised order
+const bottomNavItems = [
+  { id: 'inventory',     label: 'Inventory',     icon: '📦' },
+  { id: 'meal-planner',  label: 'Meal Planner',  icon: '📅' },
+  { id: 'browse',        label: 'Browse Food',   icon: '🔍' },
+  { id: 'notifications', label: 'Notifications', icon: '🔔' },
+  { id: 'dashboard',     label: 'Dashboard',     icon: '🏠' },
 ]
 
 const userInitials = computed(() =>
@@ -27,7 +44,7 @@ function navigate(page) {
   closeMobilePopup()
 }
 
-// ── Mobile notification popup (bottom sheet) ──
+// ── Mobile notification sheet ──
 const TYPE_CONFIG = {
   inventory: { label: 'Inventory Alert', icon: '⚠️', color: '#f59e0b' },
   donation:  { label: 'Donation Update', icon: '🤝', color: '#2da12b' },
@@ -38,27 +55,15 @@ const TYPE_CONFIG = {
 const mobilePopupOpen = ref(false)
 const bellRef         = ref(null)
 
-const mobileNotifs = ref([
-  { id: 1, type: 'inventory', message: 'Fresh Milk expires tomorrow. Use it or add to a meal.', time: '2 hours ago', isRead: false },
-  { id: 2, type: 'donation',  message: 'Your bread donation was claimed by another user.',      time: '5 hours ago', isRead: false },
-  { id: 3, type: 'meal',      message: "You haven't planned lunch for Wednesday yet.",           time: 'Yesterday',   isRead: false },
-  { id: 4, type: 'account',   message: 'New login detected from Chrome on Windows.',             time: 'Yesterday',   isRead: false },
-  { id: 5, type: 'inventory', message: 'Spinach is expiring in 2 days. Consider using it soon.', time: '2 days ago', isRead: false },
-])
+// Show only the 5 most-recent in the mobile quick-sheet
+const mobileNotifs = computed(() => notifications.value.slice(0, 5))
+const mobileUnread = computed(() => sharedUnread.value)
 
-const mobileUnread = computed(() => mobileNotifs.value.filter(n => !n.isRead).length)
-
-function toggleMobilePopup() {
-  mobilePopupOpen.value = !mobilePopupOpen.value
-}
-
-function closeMobilePopup() {
-  mobilePopupOpen.value = false
-}
+function toggleMobilePopup() { mobilePopupOpen.value = !mobilePopupOpen.value }
+function closeMobilePopup()  { mobilePopupOpen.value = false }
 
 function markMobileRead(id) {
-  const n = mobileNotifs.value.find(n => n.id === id)
-  if (n) n.isRead = true
+  markRead(id)
 }
 
 function viewAllNotifs() {
@@ -73,7 +78,7 @@ function handleClickOutside(e) {
   }
 }
 
-onMounted(() => document.addEventListener('mousedown', handleClickOutside))
+onMounted(()  => document.addEventListener('mousedown', handleClickOutside))
 onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 </script>
 
@@ -96,8 +101,8 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
         >
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
-          <span v-if="item.id === 'notifications' && unreadCount > 0" class="nav-badge">
-            {{ unreadCount > 99 ? '99+' : unreadCount }}
+          <span v-if="item.id === 'notifications' && sharedUnread > 0" class="nav-badge">
+            {{ sharedUnread > 99 ? '99+' : sharedUnread }}
           </span>
         </button>
       </nav>
@@ -198,7 +203,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
     <!-- ── MOBILE BOTTOM TAB BAR ── -->
     <nav class="bottom-tabs">
       <button
-        v-for="item in navItems.slice(0, 5)"
+        v-for="item in bottomNavItems"
         :key="item.id"
         class="tab-item"
         :class="{ active: currentPage === item.id }"
@@ -206,13 +211,37 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
       >
         <span class="tab-icon">{{ item.icon }}</span>
         <span class="tab-label">{{ item.label }}</span>
-        <span v-if="item.id === 'notifications' && unreadCount > 0" class="tab-badge">
-          {{ unreadCount }}
+        <span v-if="item.id === 'notifications' && sharedUnread > 0" class="tab-badge">
+          {{ sharedUnread > 99 ? '99+' : sharedUnread }}
         </span>
       </button>
     </nav>
 
   </div>
+
+  <!-- ── GLOBAL TOAST STACK (bottom-right, shared by all pages) ── -->
+  <Teleport to="body">
+    <div class="toast-stack" role="region" aria-label="Notifications">
+      <TransitionGroup name="toast-item" tag="div" class="toast-inner">
+        <div
+          v-for="t in toasts"
+          :key="t.id"
+          class="toast-card"
+          :style="{
+            '--t-bg':     t.config.bg,
+            '--t-border': t.config.border,
+            '--t-icon':   t.config.color,
+            '--t-text':   t.config.text,
+          }"
+          role="alert"
+        >
+          <span class="toast-icon">{{ t.icon }}</span>
+          <span class="toast-msg">{{ t.message }}</span>
+          <button class="toast-close" @click="dismiss(t.id)" aria-label="Dismiss">✕</button>
+        </div>
+      </TransitionGroup>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -586,4 +615,98 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 /* Backdrop fade */
 .sheet-enter-active .sheet-backdrop,
 .sheet-leave-active .sheet-backdrop { transition: background 0.2s; }
+
+/* ── Global Toast Stack ─────────────────────────────── */
+.toast-stack {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  pointer-events: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.toast-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.toast-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--t-bg, #f0fdf4);
+  border: 1.5px solid var(--t-border, #bbf7d0);
+  border-radius: 14px;
+  padding: 12px 14px;
+  min-width: 260px;
+  max-width: 360px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.07);
+  pointer-events: all;
+  position: relative;
+}
+
+.toast-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--t-icon, #16a34a);
+  line-height: 1;
+}
+
+.toast-msg {
+  flex: 1;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--t-text, #14532d);
+  line-height: 1.45;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--t-icon, #16a34a);
+  opacity: 0.55;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+  transition: opacity 0.15s;
+}
+.toast-close:hover { opacity: 1; }
+
+/* Stack enter/leave */
+.toast-item-enter-active {
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toast-item-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  position: absolute;
+  right: 0;
+}
+.toast-item-enter-from { opacity: 0; transform: translateX(30px) scale(0.92); }
+.toast-item-leave-to   { opacity: 0; transform: translateX(16px) scale(0.95); }
+.toast-item-move       { transition: transform 0.22s ease; }
+
+/* Mobile: anchor above bottom nav bar */
+@media (max-width: 860px) {
+  .toast-stack {
+    bottom: 76px;
+    right: 0.75rem;
+  }
+  .toast-card {
+    min-width: 220px;
+    max-width: calc(100vw - 1.5rem);
+    padding: 11px 12px;
+  }
+}
+
 </style>
