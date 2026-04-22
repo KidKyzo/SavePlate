@@ -171,7 +171,7 @@ function toggleShare(item) {
 </script>
 
 <template>
-  <AppLayout current-page="browse" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="browse" :unread-count="5" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
     <div class="browse-page">
 
       <!-- ── Page Header ── -->
