@@ -29,7 +29,7 @@ const weekLabel = computed(() => {
   return `${days[0].date} – ${days[6].date}`
 })
 
-const SLOTS = ['Breakfast', 'Lunch', 'Dinner']
+const SLOTS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks']
 
 // ── Meal plan (keyed by "iso-slot") ──
 const initialPlan = JSON.stringify({
