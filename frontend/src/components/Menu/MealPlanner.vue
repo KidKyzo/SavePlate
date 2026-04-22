@@ -29,17 +29,21 @@ const weekLabel = computed(() => {
   return `${days[0].date} – ${days[6].date}`
 })
 
-const SLOTS = ['Breakfast', 'Lunch', 'Dinner']
+const SLOTS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks']
 
 // ── Meal plan (keyed by "iso-slot") ──
-const mealPlan = ref({
+const initialPlan = JSON.stringify({
   [`${weekDays.value[0].iso}-Breakfast`]: [{ name: 'Avocado Toast', ingredient: 'Bread, Avocado' }],
   [`${weekDays.value[1].iso}-Lunch`]:     [{ name: 'Spinach Salad', ingredient: 'Spinach' }],
   [`${weekDays.value[2].iso}-Dinner`]:    [{ name: 'Pasta Pomodoro', ingredient: 'Tomatoes, Pasta' }],
 })
+const mealPlan = ref(JSON.parse(initialPlan))
 
-const isPlanConfirmed = ref(false)
-const confirmToast    = ref(false)
+const confirmedSnapshot = ref(initialPlan)
+const confirmToast      = ref(false)
+
+// True whenever mealPlan diverges from the last-confirmed snapshot
+const hasChanges = computed(() => JSON.stringify(mealPlan.value) !== confirmedSnapshot.value)
 
 function getMeals(dayIso, slot) {
   return mealPlan.value[`${dayIso}-${slot}`] || []
@@ -130,7 +134,7 @@ function removeMeal(dayIso, slot, idx) {
 }
 
 function confirmPlan() {
-  isPlanConfirmed.value = true
+  confirmedSnapshot.value = JSON.stringify(mealPlan.value)
   confirmToast.value = true
   setTimeout(() => { confirmToast.value = false }, 3500)
 }
@@ -148,14 +152,11 @@ function confirmPlan() {
             <h1>Meal Planner</h1>
             <p class="planner-sub">Plan meals · reduce waste</p>
           </div>
-          <button class="btn-confirm" :class="{ confirmed: isPlanConfirmed }" @click="confirmPlan">
-            {{ isPlanConfirmed ? '✓ Confirmed' : 'Confirm Plan' }}
-          </button>
-        </div>
-        <div class="week-nav">
-          <button class="nav-arrow" @click="weekOffset--">‹</button>
-          <span class="week-label">{{ weekLabel }}</span>
-          <button class="nav-arrow" @click="weekOffset++">›</button>
+          <div class="week-nav">
+            <button class="nav-arrow" @click="weekOffset--">‹</button>
+            <span class="week-label">{{ weekLabel }}</span>
+            <button class="nav-arrow" @click="weekOffset++">›</button>
+          </div>
         </div>
       </div>
 
@@ -306,6 +307,16 @@ function confirmPlan() {
       </div>
     </Teleport>
 
+    <!-- ── Floating Confirm FAB (bottom-right, shown only when changes exist) ── -->
+    <Teleport to="body">
+      <Transition name="fab">
+        <button v-if="hasChanges" class="fab-confirm" @click="confirmPlan">
+          <span class="fab-icon">✓</span>
+          <span class="fab-label">Confirm Plan</span>
+        </button>
+      </Transition>
+    </Teleport>
+
     <Teleport to="body">
       <Transition name="toast">
         <div v-if="confirmToast" class="toast">
@@ -319,10 +330,11 @@ function confirmPlan() {
 
 <style scoped>
 .planner-page {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  padding: 1.75rem 1.5rem;
   gap: 1.25rem;
 }
 
@@ -366,28 +378,42 @@ function confirmPlan() {
 
 .week-label { font-size: 0.82rem; font-weight: 700; color: #2a2a2a; min-width: 140px; text-align: center; }
 
-.btn-confirm {
-  padding: 9px 18px;
+/* ── Floating Confirm FAB ── */
+.fab-confirm {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 22px;
   background: linear-gradient(135deg, #2da12b, #3dc43b);
   color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 0.88rem;
+  border-radius: 50px;
+  font-size: 0.92rem;
   font-weight: 700;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(45,161,43,0.25);
-  transition: opacity 0.2s;
+  box-shadow: 0 6px 24px rgba(45,161,43,0.38);
+  transition: opacity 0.2s, transform 0.15s;
 }
-.btn-confirm:hover { opacity: 0.9; }
-.btn-confirm.confirmed { background: #e8f5e9; color: #2da12b; box-shadow: none; }
+.fab-confirm:hover { opacity: 0.92; transform: translateY(-2px); }
+.fab-icon  { font-size: 1rem; }
+.fab-label { letter-spacing: 0.01em; }
+
+/* FAB transition */
+.fab-enter-active { transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1); }
+.fab-leave-active { transition: opacity 0.16s ease, transform 0.16s ease; }
+.fab-enter-from   { opacity: 0; transform: translateY(20px) scale(0.88); }
+.fab-leave-to     { opacity: 0; transform: translateY(12px) scale(0.94); }
 
 /* ── Body layout ── */
 .planner-body {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
-  align-items: flex-start;
-  flex: 1;
 }
 
 /* ── Calendar ── */
@@ -496,8 +522,7 @@ function confirmPlan() {
 
 /* ── Inventory panel ── */
 .inventory-panel {
-  width: 230px;
-  flex-shrink: 0;
+  width: 100%;
   background: #fff;
   border: 1px solid #e8ede8;
   border-radius: 16px;
@@ -505,15 +530,17 @@ function confirmPlan() {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-height: calc(100vh - 160px);
-  overflow-y: auto;
 }
 
 .inv-head { display: flex; align-items: baseline; justify-content: space-between; }
 .inv-head h2 { font-size: 0.88rem; font-weight: 800; color: #1a1a1a; }
 .inv-hint { font-size: 0.68rem; color: #9aaa9a; }
 
-.inv-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.inv-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+}
 
 .inv-row {
   display: flex;
@@ -703,7 +730,7 @@ function confirmPlan() {
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {
-  .inventory-panel { width: 190px; }
+  .inv-list { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
 
 /* Mobile — day pills show, desktop cal hidden */
@@ -756,8 +783,8 @@ function confirmPlan() {
   .day-pill.active .pill-date,
   .day-pill.today  .pill-date { color: #2da12b; }
 
-  /* Body layout */
-  .planner-body { flex-direction: column; }
+  /* Body layout — already column */
+  .planner-body { gap: 0.85rem; }
 
   /* Hide desktop calendar */
   .desktop-cal { display: none; }
@@ -816,12 +843,35 @@ function confirmPlan() {
   }
   .mobile-chip-remove:hover { color: #ef4444; background: #fef2f2; }
 
-  /* Inventory full width */
-  .inventory-panel { width: 100%; max-height: none; }
-  .inv-add-btn { width: 36px; height: 36px; font-size: 1.1rem; border-radius: 8px; }
+  /* Inventory: compact chip wrap on mobile */
+  .inv-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .inv-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: #f9fbf9;
+    border-radius: 99px;
+    border: 1px solid #e8ede8;
+    flex-shrink: 0;
+  }
+  .inv-info { flex-direction: row; align-items: center; gap: 5px; }
+  .inv-meta { display: none; } /* hide category/qty on mobile chips */
+  .inv-name { font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+  .inv-right { gap: 4px; }
+  .exp-chip  { font-size: 0.6rem; padding: 1px 6px; }
+  .inv-add-btn { width: 28px; height: 28px; font-size: 0.95rem; border-radius: 6px; }
+  .inv-tip  { display: none; }
 
-  /* Toast above bottom tab bar */
-  .toast { bottom: 80px; }
+  /* FAB above bottom tab bar on mobile */
+  .fab-confirm { bottom: 80px; right: 1rem; padding: 11px 18px; font-size: 0.85rem; }
+
+  /* Toast above FAB on mobile */
+  .toast { bottom: 140px; }
 
   /* Modal full bottom sheet on mobile */
   .modal-overlay { align-items: flex-end; padding: 0; }

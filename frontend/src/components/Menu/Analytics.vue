@@ -4,7 +4,7 @@ import AppLayout from '@/components/Layout/AppLayout.vue'
 
 const emit = defineEmits(['navigate'])
 
-const unreadCount = ref(0)
+const unreadCount = ref(5)
 const userName = ref('Adrienne Kayana')
 
 const infoBoxes = [

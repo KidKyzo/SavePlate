@@ -4,7 +4,7 @@ import AppLayout from '@/components/Layout/AppLayout.vue'
 
 const emit = defineEmits(['navigate'])
 
-const unreadCount = ref(0)
+const unreadCount = ref(5)
 const userName    = ref('Adrienne Kayana')
 
 // ── Account Information ──
@@ -163,7 +163,7 @@ function doLogout()      { emit('navigate', 'logout') }
         </div>
 
         <div class="toggle-list">
-          <template v-for="(opt, i) in visibilityOptions" :key="opt.id">
+          <div v-for="(opt, i) in visibilityOptions" :key="opt.id">
             <div class="info-divider" v-if="i > 0"></div>
             <div class="toggle-item">
               <div class="toggle-info">
@@ -181,7 +181,7 @@ function doLogout()      { emit('navigate', 'logout') }
                 <span class="toggle-thumb"></span>
               </button>
             </div>
-          </template>
+          </div>
         </div>
       </section>
 
@@ -197,7 +197,7 @@ function doLogout()      { emit('navigate', 'logout') }
         </div>
 
         <div class="toggle-list">
-          <template v-for="(opt, i) in notifOptions" :key="opt.id">
+          <div v-for="(opt, i) in notifOptions" :key="opt.id">
             <div class="info-divider" v-if="i > 0"></div>
             <div class="toggle-item">
               <div class="toggle-info">
@@ -215,7 +215,7 @@ function doLogout()      { emit('navigate', 'logout') }
                 <span class="toggle-thumb"></span>
               </button>
             </div>
-          </template>
+          </div>
         </div>
       </section>
 

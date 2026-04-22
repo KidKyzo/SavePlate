@@ -362,7 +362,7 @@ function showToast(message, type = 'success') {
 </script>
 
 <template>
-  <AppLayout current-page="inventory" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="inventory" :unread-count="5" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
     <div class="inventory-page">
 
       <!-- ══ PAGE HEADER ══════════════════════════════════ -->
