@@ -1,8 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
+import { useNotifications } from '@/composables/useNotifications'
+import { useToast }         from '@/composables/useToast'
 
 const emit = defineEmits(['navigate'])
+
+const { unreadCount } = useNotifications()
+const { showToast }   = useToast()
 
 // ── Tab state ──
 const activeTab = ref('browse') // 'browse' | 'inventory'
@@ -161,17 +166,23 @@ function claimItem(item) {
     item.claimed   = true
     claimedId.value  = item.id
     claimingId.value = null
+    showToast(`"${item.name}" claimed successfully! 🎉`, 'success', '✅')
   }, 800)
 }
 
 // ── Share toggle (inventory tab) ──
 function toggleShare(item) {
   item.shared = !item.shared
+  showToast(
+    item.shared ? `"${item.name}" is now shared for claiming` : `"${item.name}" removed from sharing`,
+    item.shared ? 'success' : 'warning',
+    item.shared ? '🤝' : '📦'
+  )
 }
 </script>
 
 <template>
-  <AppLayout current-page="browse" :unread-count="5" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="browse" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
     <div class="browse-page">
 
       <!-- ── Page Header ── -->

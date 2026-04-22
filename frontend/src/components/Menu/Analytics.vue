@@ -1,10 +1,11 @@
 <script setup>
 import { ref } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
+import { useNotifications } from '@/composables/useNotifications'
 
 const emit = defineEmits(['navigate'])
 
-const unreadCount = ref(5)
+const { unreadCount } = useNotifications()
 const userName = ref('Adrienne Kayana')
 
 const infoBoxes = [

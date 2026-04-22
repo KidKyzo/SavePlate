@@ -1,8 +1,14 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
+import { useNotifications } from '@/composables/useNotifications'
+import { useToast }         from '@/composables/useToast'
 
 const emit = defineEmits(['navigate'])
+
+// ── Shared stores ──
+const { notifications, unreadCount, markRead } = useNotifications()
+const { showToast } = useToast()
 
 const today    = new Date()
 const greeting = computed(() => {
@@ -12,12 +18,13 @@ const greeting = computed(() => {
   return 'Good evening'
 })
 
-const summaryCards = [
-  { label: 'Items Saved',   value: '34', unit: 'total',         icon: '🥦', color: '#2da12b', bg: '#f0faf0' },
-  { label: 'Expiring Soon', value: '3',  unit: 'within 3 days', icon: '⚠️', color: '#f59e0b', bg: '#fffbeb' },
-  { label: 'Meals Planned', value: '11', unit: 'this week',     icon: '🍽️', color: '#3b82f6', bg: '#eff6ff' },
-  { label: 'Unread Alerts', value: '5',  unit: 'new',           icon: '🔔', color: '#ef4444', bg: '#fef2f2' },
-]
+// Summary cards — Unread Alerts uses live shared unreadCount
+const summaryCards = computed(() => [
+  { label: 'Items Saved',   value: '34',                      unit: 'total',         icon: '🥦', color: '#2da12b', bg: '#f0faf0' },
+  { label: 'Expiring Soon', value: '3',                       unit: 'within 3 days', icon: '⚠️', color: '#f59e0b', bg: '#fffbeb' },
+  { label: 'Meals Planned', value: '11',                      unit: 'this week',     icon: '🍽️', color: '#3b82f6', bg: '#eff6ff' },
+  { label: 'Unread Alerts', value: String(unreadCount.value), unit: 'new',           icon: '🔔', color: '#ef4444', bg: '#fef2f2' },
+])
 
 const expiringItems = [
   { name: 'Fresh Milk',   expireIn: 1, category: 'Dairy',   qty: '1L',   urgency: 'urgent'  },
@@ -36,7 +43,7 @@ const recentActivity = [
 const urgencyLabel = { urgent: '1 day', warning: '2 days', soon: '3 days' }
 const urgencyColor  = { urgent: '#ef4444', warning: '#f59e0b', soon: '#22c55e' }
 
-// ── Bell popup ──
+// ── Bell popup (desktop) — top 5 from shared store ──
 const TYPE_CONFIG = {
   inventory: { label: 'Inventory', icon: '⚠️', color: '#f59e0b' },
   donation:  { label: 'Donation',  icon: '🤝', color: '#2da12b' },
@@ -44,23 +51,18 @@ const TYPE_CONFIG = {
   account:   { label: 'Account',   icon: '🔐', color: '#ef4444' },
 }
 
-const popupNotifs = ref([
-  { id: 1, type: 'inventory', message: 'Fresh Milk expires tomorrow.',             time: '2 hours ago', isRead: false },
-  { id: 2, type: 'donation',  message: 'Your bread donation was claimed.',         time: '5 hours ago', isRead: false },
-  { id: 3, type: 'meal',      message: "Lunch not planned for Wednesday yet.",     time: 'Yesterday',   isRead: false },
-  { id: 4, type: 'account',   message: 'New login detected from Chrome.',          time: 'Yesterday',   isRead: false },
-  { id: 5, type: 'inventory', message: 'Spinach expiring in 2 days.',              time: '2 days ago',  isRead: false },
-])
-
-const unreadCount = computed(() => popupNotifs.value.filter(n => !n.isRead).length)
+const popupNotifs = computed(() => notifications.value.slice(0, 5))
 const showPopup   = ref(false)
 const bellRef     = ref(null)
 const popupRef    = ref(null)
 
 function togglePopup() { showPopup.value = !showPopup.value }
 function markPopupRead(id) {
-  const n = popupNotifs.value.find(n => n.id === id)
-  if (n) n.isRead = true
+  const n = notifications.value.find(n => n.id === id)
+  if (n && !n.isRead) {
+    markRead(id)
+    showToast('Notification marked as read', 'notification', '🔔')
+  }
 }
 function openNotifPage() { showPopup.value = false; emit('navigate', 'notifications') }
 

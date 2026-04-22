@@ -1,11 +1,15 @@
 <script setup>
 import { ref } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
+import { useToast } from '@/composables/useToast'
+import { useNotifications } from '@/composables/useNotifications'
 
 const emit = defineEmits(['navigate'])
 
-const unreadCount = ref(5)
-const userName    = ref('Adrienne Kayana')
+const { showToast } = useToast()
+const { unreadCount } = useNotifications()
+
+const userName = ref('Adrienne Kayana')
 
 // ── Account Information ──
 const userEmail = ref('adrienne@example.com')
@@ -22,6 +26,7 @@ function saveEdit() {
   userName.value  = editName.value
   userEmail.value = editEmail.value
   editMode.value  = false
+  showToast('Profile updated successfully', 'success', '👤')
 }
 function cancelEdit() {
   editMode.value = false
@@ -30,20 +35,39 @@ function cancelEdit() {
 // ── Security Settings ──
 const twoFactorEnabled = ref(false)
 
+function toggle2FA() {
+  twoFactorEnabled.value = !twoFactorEnabled.value
+  showToast(
+    twoFactorEnabled.value ? '2FA enabled — your account is more secure' : '2FA disabled',
+    twoFactorEnabled.value ? 'success' : 'warning',
+    '🔐'
+  )
+}
+
 // ── Visibility Settings ──
 const visibilityOptions = ref([
   { id: 'public-profile',   label: 'Public Profile',           desc: 'Let others find your profile',               enabled: true  },
   { id: 'show-donations',   label: 'Show Donation History',    desc: 'Display your past donations publicly',        enabled: false },
-  { id: 'show-activity',    label: 'Show Recent Activity',     desc: 'Share what you\'ve been saving lately',       enabled: true  },
+  { id: 'show-activity',    label: 'Show Recent Activity',     desc: "Share what you've been saving lately",        enabled: true  },
 ])
+
+function toggleVisibility(opt) {
+  opt.enabled = !opt.enabled
+  showToast(`${opt.label} ${opt.enabled ? 'enabled' : 'disabled'}`, opt.enabled ? 'info' : 'warning', '👁️')
+}
 
 // ── Notification Settings ──
 const notifOptions = ref([
   { id: 'expiry-alerts',    label: 'Expiry Alerts',            desc: 'Get notified when items are about to expire', enabled: true  },
   { id: 'donation-updates', label: 'Donation Updates',         desc: 'Updates on your donation activity',           enabled: true  },
-  { id: 'meal-reminders',   label: 'Meal Plan Reminders',     desc: 'Reminders so you don\'t miss planned meals',  enabled: false },
+  { id: 'meal-reminders',   label: 'Meal Plan Reminders',      desc: "Reminders so you don't miss planned meals",   enabled: false },
   { id: 'newsletter',       label: 'SavePlate Newsletter',     desc: 'Weekly tips on reducing food waste',          enabled: false },
 ])
+
+function toggleNotif(opt) {
+  opt.enabled = !opt.enabled
+  showToast(`${opt.label} ${opt.enabled ? 'enabled' : 'disabled'}`, opt.enabled ? 'notification' : 'warning', '🔔')
+}
 
 // ── Logout ──
 const showLogoutConfirm = ref(false)
@@ -130,7 +154,7 @@ function doLogout()      { emit('navigate', 'logout') }
             <button
               class="toggle-switch"
               :class="{ on: twoFactorEnabled }"
-              @click="twoFactorEnabled = !twoFactorEnabled"
+              @click="toggle2FA"
               :aria-checked="twoFactorEnabled"
               role="switch"
               aria-label="Toggle two-factor authentication"
@@ -173,7 +197,7 @@ function doLogout()      { emit('navigate', 'logout') }
               <button
                 class="toggle-switch"
                 :class="{ on: opt.enabled }"
-                @click="opt.enabled = !opt.enabled"
+                @click="toggleVisibility(opt)"
                 :aria-checked="opt.enabled"
                 role="switch"
                 :aria-label="`Toggle ${opt.label}`"
@@ -207,7 +231,7 @@ function doLogout()      { emit('navigate', 'logout') }
               <button
                 class="toggle-switch"
                 :class="{ on: opt.enabled }"
-                @click="opt.enabled = !opt.enabled"
+                @click="toggleNotif(opt)"
                 :aria-checked="opt.enabled"
                 role="switch"
                 :aria-label="`Toggle ${opt.label}`"

@@ -6,8 +6,13 @@
 // ─────────────────────────────────────────────────────────
 import { ref, computed } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
+import { useNotifications } from '@/composables/useNotifications'
+import { useToast }         from '@/composables/useToast'
 
 const emit = defineEmits(['navigate'])
+
+const { unreadCount }   = useNotifications()
+const { showToast } = useToast()
 
 // ── CONSTANTS ────────────────────────────────────────────
 // Category list (matches DB schema enum)
@@ -349,20 +354,10 @@ function addToPlan(item) {
   emit('navigate', 'meal-planner')
   showToast(`Navigating to Meal Planner with "${item.name}".`, 'info')
 }
-
-// ── TOAST NOTIFICATION ────────────────────────────────────
-const toast         = ref({ show: false, message: '', type: 'success' })
-let toastTimeout    = null
-
-function showToast(message, type = 'success') {
-  clearTimeout(toastTimeout)
-  toast.value = { show: true, message, type }
-  toastTimeout = setTimeout(() => { toast.value.show = false }, 3000)
-}
 </script>
 
 <template>
-  <AppLayout current-page="inventory" :unread-count="5" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="inventory" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
     <div class="inventory-page">
 
       <!-- ══ PAGE HEADER ══════════════════════════════════ -->
@@ -733,20 +728,6 @@ function showToast(message, type = 'success') {
       </Transition>
     </Teleport>
 
-
-    <!-- ══ TOAST NOTIFICATION ════════════════════════════ -->
-    <Teleport to="body">
-      <Transition name="slide-up">
-        <div
-          v-if="toast.show"
-          class="toast"
-          :class="toast.type"
-          role="alert"
-        >
-          {{ toast.message }}
-        </div>
-      </Transition>
-    </Teleport>
 
   </AppLayout>
 </template>

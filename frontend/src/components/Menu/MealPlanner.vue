@@ -1,8 +1,13 @@
 <script setup>
-import { ref, computed } from 'vue'
-import AppLayout from '@/components/Layout/AppLayout.vue'
+import { ref, computed, onMounted } from 'vue'
+import AppLayout        from '@/components/Layout/AppLayout.vue'
+import { useToast }        from '@/composables/useToast'
+import { useNotifications } from '@/composables/useNotifications'
 
 const emit = defineEmits(['navigate'])
+
+const { showToast } = useToast()
+const { addNotification, unreadCount } = useNotifications()
 
 // ── Week navigation ──
 const weekOffset    = ref(0)
@@ -51,13 +56,13 @@ function getMeals(dayIso, slot) {
 
 // ── Inventory panel (sorted by expiry urgency) ──
 const inventory = ref([
-  { id: 1, name: 'Fresh Milk',    qty: '1L',    daysLeft: 1, category: 'Dairy'    },
-  { id: 2, name: 'Spinach',       qty: '200g',  daysLeft: 2, category: 'Veggies'  },
-  { id: 3, name: 'Greek Yogurt',  qty: '500g',  daysLeft: 3, category: 'Dairy'    },
-  { id: 4, name: 'Tomatoes',      qty: '4 pcs', daysLeft: 4, category: 'Veggies'  },
-  { id: 5, name: 'Chicken Thigh', qty: '300g',  daysLeft: 5, category: 'Protein'  },
-  { id: 6, name: 'Brown Rice',    qty: '500g',  daysLeft: 7, category: 'Grains'   },
-  { id: 7, name: 'Cheddar',       qty: '150g',  daysLeft: 9, category: 'Dairy'    },
+  { id: 1, name: 'Fresh Milk',    qty: '1L',    daysLeft: 1, category: 'Dairy',   isReserved: false },
+  { id: 2, name: 'Spinach',       qty: '200g',  daysLeft: 2, category: 'Veggies', isReserved: false },
+  { id: 3, name: 'Greek Yogurt',  qty: '500g',  daysLeft: 3, category: 'Dairy',   isReserved: false },
+  { id: 4, name: 'Tomatoes',      qty: '4 pcs', daysLeft: 4, category: 'Veggies', isReserved: false },
+  { id: 5, name: 'Chicken Thigh', qty: '300g',  daysLeft: 5, category: 'Protein', isReserved: false },
+  { id: 6, name: 'Brown Rice',    qty: '500g',  daysLeft: 7, category: 'Grains',  isReserved: false },
+  { id: 7, name: 'Cheddar',       qty: '150g',  daysLeft: 9, category: 'Dairy',   isReserved: false },
 ])
 
 function urgencyColor(days) {
@@ -108,6 +113,7 @@ function addMeal() {
     name,
     ingredient: selectedIngredients.value.join(', ') || '—',
   })
+  showToast(`“${name}” added to ${modalSlot.value}`, 'success', '📅')
   closeModal()
 }
 
@@ -115,33 +121,68 @@ function addRecipe(rec) {
   const key = `${modalDay.value}-${modalSlot.value}`
   if (!mealPlan.value[key]) mealPlan.value[key] = []
   mealPlan.value[key].push({ name: rec.name, ingredient: rec.uses.join(', ') })
+  showToast(`“${rec.name}” added to ${modalSlot.value}`, 'meal', '🍳')
   closeModal()
 }
 
 function addInventoryToDay(item) {
-  // Quick-add to today's first empty slot
+  // Quick-add to today’s first empty slot
   const today = weekDays.value.find(d => d.isToday) || weekDays.value[0]
   const emptySlot = SLOTS.find(s => getMeals(today.iso, s).length === 0)
-  if (!emptySlot) return
+  if (!emptySlot) {
+    showToast('All meal slots for today are already filled.', 'warning')
+    return
+  }
   const key = `${today.iso}-${emptySlot}`
   if (!mealPlan.value[key]) mealPlan.value[key] = []
   mealPlan.value[key].push({ name: `Meal with ${item.name}`, ingredient: item.name })
+  showToast(`${item.name} quick-added to today’s ${emptySlot}`, 'success', '➕')
 }
 
 function removeMeal(dayIso, slot, idx) {
   const key = `${dayIso}-${slot}`
-  if (mealPlan.value[key]) mealPlan.value[key].splice(idx, 1)
+  if (mealPlan.value[key]) {
+    const removed = mealPlan.value[key][idx]
+    mealPlan.value[key].splice(idx, 1)
+    showToast(`Removed “${removed?.name ?? 'meal'}” from ${slot}`, 'warning', '🗑️')
+  }
 }
 
+// UC6-M3: Confirm plan — save snapshot + reserve inventory + schedule notification
 function confirmPlan() {
   confirmedSnapshot.value = JSON.stringify(mealPlan.value)
-  confirmToast.value = true
-  setTimeout(() => { confirmToast.value = false }, 3500)
+
+  // UC6 Gap 1: Simulate inventory reservation
+  // Collect all ingredient strings from planned meals this week
+  const allIngredients = Object.values(mealPlan.value)
+    .flat()
+    .map(meal => meal.ingredient)
+    .join(', ')
+    .toLowerCase()
+
+  let reservedCount = 0
+  inventory.value.forEach(item => {
+    if (allIngredients.includes(item.name.toLowerCase())) {
+      item.isReserved = true
+      reservedCount++
+    }
+  })
+
+  // UC6 Gap 2: Schedule post-confirm notification (meal reminder)
+  addNotification(
+    'meal',
+    `Your meal plan for ${weekLabel.value} has been confirmed. Daily reminders have been scheduled.`,
+    'meal-planner'
+  )
+
+  // Toast confirmation
+  const reservedMsg = reservedCount > 0 ? ` ${reservedCount} ingredient(s) reserved.` : ''
+  showToast(`Meal plan confirmed!  ${reservedMsg.trim()}`, 'success', '✅')
 }
 </script>
 
 <template>
-  <AppLayout current-page="meal-planner" :unread-count="5" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="meal-planner" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
 
     <div class="planner-page">
 
@@ -237,16 +278,18 @@ function confirmPlan() {
             <span class="inv-hint">Sorted by expiry</span>
           </div>
           <div class="inv-list">
-            <div v-for="item in inventory" :key="item.id" class="inv-row">
+            <div v-for="item in inventory" :key="item.id" class="inv-row" :class="{ 'inv-reserved': item.isReserved }">
               <div class="inv-info">
                 <span class="inv-name">{{ item.name }}</span>
                 <span class="inv-meta">{{ item.category }} · {{ item.qty }}</span>
               </div>
               <div class="inv-right">
-                <span class="exp-chip" :style="{ background: urgencyColor(item.daysLeft).bg, color: urgencyColor(item.daysLeft).color }">
+                <span v-if="item.isReserved" class="reserved-chip">🔒 Reserved</span>
+                <span v-else class="exp-chip" :style="{ background: urgencyColor(item.daysLeft).bg, color: urgencyColor(item.daysLeft).color }">
                   {{ item.daysLeft }}d
                 </span>
-                <button class="inv-add-btn" @click="addInventoryToDay(item)" title="Quick-add to today">＋</button>
+                <button class="inv-add-btn" @click="addInventoryToDay(item)" :disabled="item.isReserved" :title="item.isReserved ? 'Reserved for meal plan' : 'Quick-add to today'">＋</button>
+
               </div>
             </div>
           </div>
@@ -317,14 +360,6 @@ function confirmPlan() {
       </Transition>
     </Teleport>
 
-    <Teleport to="body">
-      <Transition name="toast">
-        <div v-if="confirmToast" class="toast">
-          ✅ Meal plan confirmed! Items reserved and reminders scheduled.
-        </div>
-      </Transition>
-    </Teleport>
-
   </AppLayout>
 </template>
 
@@ -382,7 +417,8 @@ function confirmPlan() {
 .fab-confirm {
   position: fixed;
   bottom: 2rem;
-  right: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 500;
   display: flex;
   align-items: center;
@@ -399,15 +435,15 @@ function confirmPlan() {
   box-shadow: 0 6px 24px rgba(45,161,43,0.38);
   transition: opacity 0.2s, transform 0.15s;
 }
-.fab-confirm:hover { opacity: 0.92; transform: translateY(-2px); }
+.fab-confirm:hover { opacity: 0.92; transform: translateX(-50%) translateY(-2px); }
 .fab-icon  { font-size: 1rem; }
 .fab-label { letter-spacing: 0.01em; }
 
 /* FAB transition */
 .fab-enter-active { transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1); }
 .fab-leave-active { transition: opacity 0.16s ease, transform 0.16s ease; }
-.fab-enter-from   { opacity: 0; transform: translateY(20px) scale(0.88); }
-.fab-leave-to     { opacity: 0; transform: translateY(12px) scale(0.94); }
+.fab-enter-from   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.88); }
+.fab-leave-to     { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.94); }
 
 /* ── Body layout ── */
 .planner-body {
@@ -572,7 +608,10 @@ function confirmPlan() {
   display: flex; align-items: center; justify-content: center; color: #5a6a5a;
   transition: border-color 0.15s, color 0.15s;
 }
-.inv-add-btn:hover { border-color: #2da12b; color: #2da12b; }
+.inv-add-btn:hover:not(:disabled) { border-color: #2da12b; color: #2da12b; }
+.inv-add-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.inv-reserved { background: #faf5ff; border-color: #ddd6fe; }
 
 .inv-tip { font-size: 0.72rem; color: #9aaa9a; line-height: 1.5; border-top: 1px solid #f0f4f0; padding-top: 0.75rem; }
 
@@ -708,25 +747,17 @@ function confirmPlan() {
 .recipe-uses { font-size: 0.73rem; color: #9aaa9a; margin-top: 2px; }
 .recipe-urgency { font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
 
-/* ── Toast ── */
-.toast {
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a3a1a;
-  color: #fff;
-  padding: 14px 22px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-  z-index: 2000;
-  max-width: 90vw;
-  text-align: center;
+/* ── Reserved badge on inventory items ── */
+.reserved-chip {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+  white-space: nowrap;
 }
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {
@@ -868,7 +899,7 @@ function confirmPlan() {
   .inv-tip  { display: none; }
 
   /* FAB above bottom tab bar on mobile */
-  .fab-confirm { bottom: 80px; right: 1rem; padding: 11px 18px; font-size: 0.85rem; }
+  .fab-confirm { bottom: 80px; padding: 11px 18px; font-size: 0.85rem; }
 
   /* Toast above FAB on mobile */
   .toast { bottom: 140px; }
