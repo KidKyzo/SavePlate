@@ -738,7 +738,8 @@ function confirmPlan() {
     display: flex;
     gap: 0.5rem;
     padding-bottom: 2px;
-    width: max-content;
+    width: 100%;
+    justify-content: center;
   }
   .day-pill {
     display: flex; flex-direction: column; align-items: center;
@@ -768,6 +769,7 @@ function confirmPlan() {
     border: 1px solid #e8ede8;
     border-radius: 16px;
     overflow: hidden;
+    width: 100%;
   }
 
   .mobile-slot {

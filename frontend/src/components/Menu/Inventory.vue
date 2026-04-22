@@ -1,0 +1,1181 @@
+<script setup>
+// ─────────────────────────────────────────────────────────
+// Inventory.vue  –  Use Case 2: Manage Food Inventory
+// Allows users to add, edit, mark as used, donate, and
+// delete food items from their personal household inventory.
+// ─────────────────────────────────────────────────────────
+import { ref, computed } from 'vue'
+import AppLayout from '@/components/Layout/AppLayout.vue'
+
+const emit = defineEmits(['navigate'])
+
+// ── CONSTANTS ────────────────────────────────────────────
+// Category list (matches DB schema enum)
+const CATEGORIES = ['Vegetables', 'Dairy', 'Canned', 'Frozen', 'Bakery', 'Other']
+
+// Storage location options (matches DB schema enum)
+const STORAGE_LOCATIONS = ['Fridge', 'Freezer', 'Pantry']
+
+// Unit options for quantity
+const UNITS = ['pcs', 'g', 'kg', 'ml', 'L']
+
+// ── MOCK INVENTORY DATA ───────────────────────────────────
+// In a real app, this would come from: GET /api/items
+// Each item follows the FoodItem schema from the Data Dictionary
+const items = ref([
+  {
+    id: 1,
+    name: 'Fresh Milk',
+    category: 'Dairy',
+    quantity: 1,
+    unit: 'L',
+    expiryDate: getTodayPlusDays(1),   // expires tomorrow → URGENT
+    storageLocation: 'Fridge',
+    status: 'available',               // available | used | donated | reserved
+    notes: 'Opened on April 18',
+  },
+  {
+    id: 2,
+    name: 'Spinach',
+    category: 'Vegetables',
+    quantity: 200,
+    unit: 'g',
+    expiryDate: getTodayPlusDays(2),   // expires in 2 days → WARNING
+    storageLocation: 'Fridge',
+    status: 'available',
+    notes: '',
+  },
+  {
+    id: 3,
+    name: 'Greek Yogurt',
+    category: 'Dairy',
+    quantity: 500,
+    unit: 'g',
+    expiryDate: getTodayPlusDays(4),   // expires in 4 days → SAFE
+    storageLocation: 'Fridge',
+    status: 'available',
+    notes: '',
+  },
+  {
+    id: 4,
+    name: 'Canned Tuna',
+    category: 'Canned',
+    quantity: 3,
+    unit: 'pcs',
+    expiryDate: getTodayPlusDays(90),  // expires in 90 days → SAFE
+    storageLocation: 'Pantry',
+    status: 'available',
+    notes: '',
+  },
+  {
+    id: 5,
+    name: 'Frozen Peas',
+    category: 'Frozen',
+    quantity: 400,
+    unit: 'g',
+    expiryDate: getTodayPlusDays(30),  // expires in 30 days → SAFE
+    storageLocation: 'Freezer',
+    status: 'available',
+    notes: '',
+  },
+])
+
+// ── HELPER: Date Utilities ────────────────────────────────
+// Returns a date string "YYYY-MM-DD" n days from today
+function getTodayPlusDays(n) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
+// Returns today as "YYYY-MM-DD" string (used as min for date picker)
+function getTodayString() {
+  return new Date().toISOString().split('T')[0]
+}
+
+// Returns days remaining until expiry (negative = already expired)
+function daysUntilExpiry(dateStr) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const expiry = new Date(dateStr)
+  return Math.round((expiry - today) / (1000 * 60 * 60 * 24))
+}
+
+// Returns { label, color, bgColor } for the expiry badge
+function getExpiryStatus(dateStr) {
+  const days = daysUntilExpiry(dateStr)
+  if (days < 0)  return { label: 'Expired',            color: '#dc2626', bgColor: '#fef2f2' }
+  if (days === 0) return { label: 'Expires Today',      color: '#dc2626', bgColor: '#fef2f2' }
+  if (days <= 2)  return { label: `${days}d left`,      color: '#ef4444', bgColor: '#fef2f2' }
+  if (days <= 5)  return { label: `${days}d left`,      color: '#f59e0b', bgColor: '#fffbeb' }
+  return           { label: `${days}d left`,             color: '#22c55e', bgColor: '#f0fdf4' }
+}
+
+// ── COMPUTED: Summary Info Boxes (Dashboard‐style cards) ──
+const summaryCards = computed(() => {
+  const active      = items.value.filter(i => i.status === 'available')
+  const expiringSoon = active.filter(i => daysUntilExpiry(i.expiryDate) <= 3)
+  const usedCount   = items.value.filter(i => i.status === 'used').length
+
+  return [
+    { label: 'Total Items',   value: active.length,       unit: 'in inventory', icon: '📦', color: '#3b82f6', bg: '#eff6ff' },
+    { label: 'Expiring Soon', value: expiringSoon.length, unit: 'within 3 days', icon: '⚠️', color: '#f59e0b', bg: '#fffbeb' },
+    { label: 'Items Used',    value: usedCount,            unit: 'saved from waste', icon: '✅', color: '#22c55e', bg: '#f0fdf4' },
+  ]
+})
+
+// ── FILTER / SORT ─────────────────────────────────────────
+const sortOption     = ref('expiryDate')  // 'expiryDate' | 'name' | 'category'
+const filterCategory = ref('All')         // 'All' or a specific category
+
+// Only show 'available' items in the main list (hide used/donated)
+const filteredItems = computed(() => {
+  let list = items.value.filter(i => i.status === 'available')
+
+  // Filter by category
+  if (filterCategory.value !== 'All') {
+    list = list.filter(i => i.category === filterCategory.value)
+  }
+
+  // Sort
+  if (sortOption.value === 'name') {
+    list = [...list].sort((a, b) => a.name.localeCompare(b.name))
+  } else if (sortOption.value === 'category') {
+    list = [...list].sort((a, b) => a.category.localeCompare(b.category))
+  } else {
+    // Default: sort by soonest expiry first
+    list = [...list].sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))
+  }
+  return list
+})
+
+// ── ADD FOOD ITEM MODAL ───────────────────────────────────
+const showAddModal = ref(false)
+
+// Form data bound to the "Add Food Item" modal inputs
+const newItem = ref(createEmptyItem())
+
+// Validation error message shown in the modal
+const addError = ref('')
+
+// Creates a fresh empty form object
+function createEmptyItem() {
+  return {
+    name: '',
+    category: '',
+    quantity: '',
+    unit: 'pcs',
+    expiryDate: '',
+    storageLocation: '',
+    notes: '',
+  }
+}
+
+function openAddModal() {
+  newItem.value = createEmptyItem()
+  addError.value = ''
+  showAddModal.value = true
+}
+
+function closeAddModal() {
+  showAddModal.value = false
+}
+
+// Validates the form and saves the new item to the list
+// In a real app: POST /api/items, then update local state
+function submitAddItem() {
+  // ── Validation (FR-2.1) ──
+  if (!newItem.value.name.trim()) {
+    addError.value = 'Item name is required.'
+    return
+  }
+  if (!newItem.value.category) {
+    addError.value = 'Please select a category.'
+    return
+  }
+  if (!newItem.value.quantity || newItem.value.quantity <= 0) {
+    addError.value = 'Quantity must be a positive number.'
+    return
+  }
+  if (!newItem.value.expiryDate) {
+    addError.value = 'Expiry date is required.'
+    return
+  }
+  if (newItem.value.expiryDate < getTodayString()) {
+    addError.value = 'Expiry date cannot be in the past.'
+    return
+  }
+
+  // ── Save (mock: push to local array) ──
+  items.value.push({
+    id: Date.now(),                      // temporary ID; real app uses MongoDB _id
+    name: newItem.value.name.trim(),
+    category: newItem.value.category,
+    quantity: Number(newItem.value.quantity),
+    unit: newItem.value.unit,
+    expiryDate: newItem.value.expiryDate,
+    storageLocation: newItem.value.storageLocation,
+    notes: newItem.value.notes,
+    status: 'available',
+  })
+
+  showToast(`"${newItem.value.name}" added to inventory!`, 'success')
+  closeAddModal()
+}
+
+// ── EDIT ITEM MODAL ───────────────────────────────────────
+const showEditModal = ref(false)
+const editItem = ref(null)          // holds a copy of the item being edited
+const editError = ref('')
+
+function openEditModal(item) {
+  // Make a shallow copy so edits don't mutate the original until saved
+  editItem.value = { ...item }
+  editError.value = ''
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editItem.value = null
+}
+
+// Applies edits to the item in the items array
+// In a real app: PUT /api/items/:id
+function submitEditItem() {
+  if (!editItem.value.name.trim()) {
+    editError.value = 'Item name is required.'
+    return
+  }
+  if (!editItem.value.expiryDate) {
+    editError.value = 'Expiry date is required.'
+    return
+  }
+  if (editItem.value.expiryDate < getTodayString()) {
+    editError.value = 'Expiry date cannot be in the past.'
+    return
+  }
+
+  // Find the item in the array and replace it with the edited copy
+  const idx = items.value.findIndex(i => i.id === editItem.value.id)
+  if (idx !== -1) {
+    items.value[idx] = { ...editItem.value }
+  }
+
+  showToast(`"${editItem.value.name}" updated.`, 'success')
+  closeEditModal()
+}
+
+// ── MARK AS USED ──────────────────────────────────────────
+// (FR-2.3) Updates the item's status to 'used'
+// In a real app: PATCH /api/items/:id/status { status: 'used' }
+function markAsUsed(item) {
+  if (!confirm(`Mark "${item.name}" as fully used? This will update your savings record.`)) return
+  item.status = 'used'
+  showToast(`"${item.name}" marked as used. Great job! 🎉`, 'success')
+}
+
+// ── DELETE ITEM ───────────────────────────────────────────
+// (FR-2.2) Removes the item from the list
+// In a real app: DELETE /api/items/:id
+function deleteItem(item) {
+  // Guard: block deletion if item is reserved for a meal plan (FR-2.5)
+  if (item.status === 'reserved') {
+    alert(`'${item.name}' is reserved for your meal plan. Please remove it from the plan before deleting.`)
+    return
+  }
+  if (!confirm(`Remove "${item.name}" from your inventory? This cannot be undone.`)) return
+  items.value = items.value.filter(i => i.id !== item.id)
+  showToast(`"${item.name}" removed from inventory.`, 'info')
+}
+
+// ── DONATE MODAL ──────────────────────────────────────────
+// (FR-2.4) Converts an inventory item into a donation listing
+const showDonateModal = ref(false)
+const donateTarget    = ref(null)     // which item is being donated
+const donateForm      = ref({ location: '', availability: '' })
+const donateError     = ref('')
+
+function openDonateModal(item) {
+  donateTarget.value = item
+  donateForm.value   = { location: '', availability: '' }
+  donateError.value  = ''
+  showDonateModal.value = true
+}
+
+function closeDonateModal() {
+  showDonateModal.value = false
+  donateTarget.value    = null
+}
+
+// Converts item to donation and updates its status
+// In a real app: POST /api/donations, then PATCH item status → 'donated'
+function submitDonate() {
+  if (!donateForm.value.location.trim()) {
+    donateError.value = 'Pickup location is required.'
+    return
+  }
+  if (!donateForm.value.availability.trim()) {
+    donateError.value = 'Availability details are required.'
+    return
+  }
+
+  // Update item status to 'donated' (removes it from active inventory view)
+  donateTarget.value.status = 'donated'
+  showToast(`"${donateTarget.value.name}" has been listed for donation! 🤝`, 'success')
+  closeDonateModal()
+}
+
+// ── ADD TO MEAL PLAN ──────────────────────────────────────
+// Simple: navigates to the Meal Planner page
+function addToPlan(item) {
+  emit('navigate', 'meal-planner')
+  showToast(`Navigating to Meal Planner with "${item.name}".`, 'info')
+}
+
+// ── TOAST NOTIFICATION ────────────────────────────────────
+const toast         = ref({ show: false, message: '', type: 'success' })
+let toastTimeout    = null
+
+function showToast(message, type = 'success') {
+  clearTimeout(toastTimeout)
+  toast.value = { show: true, message, type }
+  toastTimeout = setTimeout(() => { toast.value.show = false }, 3000)
+}
+</script>
+
+<template>
+  <AppLayout current-page="inventory" @navigate="emit('navigate', $event)">
+    <div class="inventory-page">
+
+      <!-- ══ PAGE HEADER ══════════════════════════════════ -->
+      <div class="page-header">
+        <div class="header-text">
+          <h1>📦 Food Inventory</h1>
+          <p class="sub">Manage your household food items</p>
+        </div>
+        <!-- Primary action: Add a new food item (FR-2.1) -->
+        <button class="btn-primary" @click="openAddModal" id="btn-add-item">
+          + Add Food Item
+        </button>
+      </div>
+
+      <!-- ══ INFO BOXES (Summary Cards) ══════════════════════ -->
+      <!-- Match Dashboard summary card style -->
+      <div class="cards-row">
+        <div
+          v-for="card in summaryCards"
+          :key="card.label"
+          class="summary-card"
+          :style="{ '--card-color': card.color, '--card-bg': card.bg }"
+        >
+          <div class="card-icon">{{ card.icon }}</div>
+          <div class="card-body">
+            <div class="card-value">{{ card.value }}</div>
+            <div class="card-label">{{ card.label }}</div>
+            <div class="card-unit">{{ card.unit }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ FILTER & SORT BAR ════════════════════════════ -->
+      <div class="controls-bar">
+        <!-- Filter by category -->
+        <div class="filter-group">
+          <span class="control-label">Category:</span>
+          <select v-model="filterCategory" class="select-control" id="filter-category">
+            <option value="All">All</option>
+            <option v-for="cat in CATEGORIES" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <!-- Sort by field -->
+        <div class="filter-group">
+          <span class="control-label">Sort by:</span>
+          <select v-model="sortOption" class="select-control" id="sort-option">
+            <option value="expiryDate">Expiry Date</option>
+            <option value="name">Name</option>
+            <option value="category">Category</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ══ INVENTORY LIST ════════════════════════════════ -->
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Inventory Items</h2>
+          <span class="item-count">{{ filteredItems.length }} item(s)</span>
+        </div>
+
+        <!-- Empty state (NFR-US-4 / FR-4.5) -->
+        <div v-if="filteredItems.length === 0" class="empty-state">
+          <div class="empty-icon">🥡</div>
+          <p>No items found. Try adjusting your filters or add a new food item!</p>
+          <button class="btn-primary" @click="openAddModal">+ Add Food Item</button>
+        </div>
+
+        <!-- Item list -->
+        <div v-else class="item-list">
+          <div
+            v-for="item in filteredItems"
+            :key="item.id"
+            class="item-row"
+            :class="{ urgent: daysUntilExpiry(item.expiryDate) <= 2 }"
+          >
+            <!-- Item Info -->
+            <div class="item-info">
+              <div class="item-name">{{ item.name }}</div>
+              <div class="item-meta">
+                <span class="tag">{{ item.category }}</span>
+                <span class="tag">{{ item.quantity }}{{ item.unit }}</span>
+                <span v-if="item.storageLocation" class="tag muted">{{ item.storageLocation }}</span>
+              </div>
+              <div v-if="item.notes" class="item-notes">📝 {{ item.notes }}</div>
+            </div>
+
+            <!-- Expiry Badge (FR-3.5: color-coded) -->
+            <div class="item-expiry">
+              <span
+                class="expiry-badge"
+                :style="{
+                  color: getExpiryStatus(item.expiryDate).color,
+                  background: getExpiryStatus(item.expiryDate).bgColor
+                }"
+              >
+                {{ getExpiryStatus(item.expiryDate).label }}
+              </span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="item-actions">
+              <!-- Edit Button -->
+              <button class="btn-action edit" @click="openEditModal(item)" :title="'Edit ' + item.name">
+                ✏️ Edit
+              </button>
+
+              <!-- Donate Button (FR-2.4) -->
+              <button class="btn-action donate" @click="openDonateModal(item)" :title="'Donate ' + item.name">
+                🤝 Donate
+              </button>
+
+              <!-- Mark as Used Button (FR-2.3) -->
+              <button class="btn-action used" @click="markAsUsed(item)" :title="'Mark ' + item.name + ' as used'">
+                ✅ Used
+              </button>
+
+              <!-- Add to Plan Button (UC6) -->
+              <button class="btn-action plan" @click="addToPlan(item)" :title="'Add ' + item.name + ' to meal plan'">
+                📅 Plan
+              </button>
+
+              <!-- Delete Button (FR-2.2) -->
+              <button class="btn-action delete" @click="deleteItem(item)" :title="'Delete ' + item.name">
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end .inventory-page -->
+
+
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Add Food Item (FR-2.1)
+         Fields: Name, Category, Quantity, Unit,
+                 Expiry Date, Storage Location, Notes
+    ═══════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showAddModal" class="modal-overlay" @click.self="closeAddModal">
+          <div class="modal" role="dialog" aria-labelledby="modal-add-title">
+
+            <div class="modal-header">
+              <h3 id="modal-add-title">➕ Add Food Item</h3>
+              <button class="modal-close" @click="closeAddModal" aria-label="Close">✕</button>
+            </div>
+
+            <!-- Validation Error Banner -->
+            <div v-if="addError" class="error-msg">⛔ {{ addError }}</div>
+
+            <div class="modal-body">
+              <!-- Food Name (required) -->
+              <div class="form-group">
+                <label for="add-name">Food Name <span class="required">*</span></label>
+                <input
+                  id="add-name"
+                  v-model="newItem.name"
+                  type="text"
+                  placeholder="e.g. Fresh Spinach"
+                  class="form-input"
+                />
+              </div>
+
+              <!-- Category (required) -->
+              <div class="form-group">
+                <label for="add-category">Category <span class="required">*</span></label>
+                <select id="add-category" v-model="newItem.category" class="form-input">
+                  <option value="" disabled>Select a category</option>
+                  <option v-for="cat in CATEGORIES" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+              </div>
+
+              <!-- Quantity + Unit (required) -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="add-qty">Quantity <span class="required">*</span></label>
+                  <input
+                    id="add-qty"
+                    v-model="newItem.quantity"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 200"
+                    class="form-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="add-unit">Unit <span class="required">*</span></label>
+                  <select id="add-unit" v-model="newItem.unit" class="form-input">
+                    <option v-for="u in UNITS" :key="u" :value="u">{{ u }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Expiry Date (required, must not be in the past) -->
+              <div class="form-group">
+                <label for="add-expiry">Expiry Date <span class="required">*</span></label>
+                <input
+                  id="add-expiry"
+                  v-model="newItem.expiryDate"
+                  type="date"
+                  :min="getTodayString()"
+                  class="form-input"
+                />
+              </div>
+
+              <!-- Storage Location (optional) -->
+              <div class="form-group">
+                <label for="add-storage">Storage Location <span class="optional">(optional)</span></label>
+                <select id="add-storage" v-model="newItem.storageLocation" class="form-input">
+                  <option value="">— Not specified —</option>
+                  <option v-for="loc in STORAGE_LOCATIONS" :key="loc" :value="loc">{{ loc }}</option>
+                </select>
+              </div>
+
+              <!-- Notes (optional) -->
+              <div class="form-group">
+                <label for="add-notes">Notes <span class="optional">(optional)</span></label>
+                <textarea
+                  id="add-notes"
+                  v-model="newItem.notes"
+                  rows="2"
+                  placeholder="e.g. Opened on April 18"
+                  class="form-input"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn-secondary" @click="closeAddModal">Cancel</button>
+              <button class="btn-primary" @click="submitAddItem" id="btn-submit-add">Add Item</button>
+            </div>
+
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Edit Food Item (FR-2.2)
+    ═══════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showEditModal && editItem" class="modal-overlay" @click.self="closeEditModal">
+          <div class="modal" role="dialog" aria-labelledby="modal-edit-title">
+
+            <div class="modal-header">
+              <h3 id="modal-edit-title">✏️ Edit Food Item</h3>
+              <button class="modal-close" @click="closeEditModal" aria-label="Close">✕</button>
+            </div>
+
+            <div v-if="editError" class="error-msg">⛔ {{ editError }}</div>
+
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="edit-name">Food Name <span class="required">*</span></label>
+                <input id="edit-name" v-model="editItem.name" type="text" class="form-input" />
+              </div>
+
+              <div class="form-group">
+                <label for="edit-category">Category <span class="required">*</span></label>
+                <select id="edit-category" v-model="editItem.category" class="form-input">
+                  <option v-for="cat in CATEGORIES" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="edit-qty">Quantity <span class="required">*</span></label>
+                  <input id="edit-qty" v-model="editItem.quantity" type="number" min="1" class="form-input" />
+                </div>
+                <div class="form-group">
+                  <label for="edit-unit">Unit</label>
+                  <select id="edit-unit" v-model="editItem.unit" class="form-input">
+                    <option v-for="u in UNITS" :key="u" :value="u">{{ u }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="edit-expiry">Expiry Date <span class="required">*</span></label>
+                <input
+                  id="edit-expiry"
+                  v-model="editItem.expiryDate"
+                  type="date"
+                  :min="getTodayString()"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="edit-storage">Storage Location</label>
+                <select id="edit-storage" v-model="editItem.storageLocation" class="form-input">
+                  <option value="">— Not specified —</option>
+                  <option v-for="loc in STORAGE_LOCATIONS" :key="loc" :value="loc">{{ loc }}</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="edit-notes">Notes</label>
+                <textarea id="edit-notes" v-model="editItem.notes" rows="2" class="form-input"></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn-secondary" @click="closeEditModal">Cancel</button>
+              <button class="btn-primary" @click="submitEditItem" id="btn-submit-edit">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Donate Item (FR-2.4)
+         Converts an inventory item to a donation listing.
+         Fields: Pickup Location, Availability
+    ═══════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showDonateModal && donateTarget" class="modal-overlay" @click.self="closeDonateModal">
+          <div class="modal" role="dialog" aria-labelledby="modal-donate-title">
+
+            <div class="modal-header">
+              <h3 id="modal-donate-title">🤝 Donate Food Item</h3>
+              <button class="modal-close" @click="closeDonateModal" aria-label="Close">✕</button>
+            </div>
+
+            <!-- Preview of which item is being donated -->
+            <div class="donate-preview">
+              Donating: <strong>{{ donateTarget.name }}</strong>
+              ({{ donateTarget.quantity }}{{ donateTarget.unit }} · Expires {{ donateTarget.expiryDate }})
+            </div>
+
+            <div v-if="donateError" class="error-msg">⛔ {{ donateError }}</div>
+
+            <div class="modal-body">
+              <!-- Pickup Location (required) -->
+              <div class="form-group">
+                <label for="donate-location">Pickup Location <span class="required">*</span></label>
+                <input
+                  id="donate-location"
+                  v-model="donateForm.location"
+                  type="text"
+                  placeholder="e.g. Jl. Diponegoro No. 12, Denpasar"
+                  class="form-input"
+                />
+              </div>
+
+              <!-- Availability Window (required) -->
+              <div class="form-group">
+                <label for="donate-avail">Pickup Availability <span class="required">*</span></label>
+                <input
+                  id="donate-avail"
+                  v-model="donateForm.availability"
+                  type="text"
+                  placeholder="e.g. Weekdays 3PM – 7PM"
+                  class="form-input"
+                />
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn-secondary" @click="closeDonateModal">Cancel</button>
+              <button class="btn-donate" @click="submitDonate" id="btn-submit-donate">🤝 Post Donation</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+
+    <!-- ══ TOAST NOTIFICATION ════════════════════════════ -->
+    <Teleport to="body">
+      <Transition name="slide-up">
+        <div
+          v-if="toast.show"
+          class="toast"
+          :class="toast.type"
+          role="alert"
+        >
+          {{ toast.message }}
+        </div>
+      </Transition>
+    </Teleport>
+
+  </AppLayout>
+</template>
+
+<style scoped>
+/* ─────────────────────────────────────────────
+   INVENTORY PAGE  – matches Dashboard.vue theme
+   Font: Inter (loaded in style.css)
+   Colors: same as Dashboard (white panels,
+           green accent #2da12b, clean borders)
+───────────────────────────────────────────── */
+
+/* ── Page wrapper ── */
+.inventory-page {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Page Header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.header-text { flex: 1; min-width: 0; }
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  /* Override global h1 gradient */
+  background: none;
+  -webkit-text-fill-color: unset;
+  margin-bottom: 3px;
+  line-height: 1.2;
+}
+.sub { font-size: 0.78rem; color: #9aaa9a; }
+
+/* ── Summary Cards Row (same as Dashboard) ── */
+.cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+.summary-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid #e8ede8;
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+}
+.card-icon  { font-size: 1.6rem; line-height: 1; }
+.card-value { font-size: 1.6rem; font-weight: 900; color: var(--card-color, #3b82f6); line-height: 1; }
+.card-label { font-size: 0.75rem; font-weight: 700; color: #2a2a2a; margin-top: 3px; }
+.card-unit  { font-size: 0.65rem; color: #9aaa9a; }
+
+/* ── Controls Bar (Filter + Sort) ── */
+.controls-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.control-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  white-space: nowrap;
+}
+.select-control {
+  padding: 6px 10px;
+  border: 1.5px solid #e8ede8;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a1a;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.select-control:focus { border-color: #2da12b; }
+
+/* ── Panel (same style as Dashboard .panel) ── */
+.panel {
+  background: #fff;
+  border: 1px solid #e8ede8;
+  border-radius: 16px;
+  padding: 1.1rem;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+.panel-head h2 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+.item-count {
+  font-size: 0.75rem;
+  color: #9aaa9a;
+  background: #f0f4f0;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+.empty-icon { font-size: 2.5rem; }
+.empty-state p { font-size: 0.88rem; color: #7a8a7a; }
+
+/* ── Item List ── */
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Single Item Row ── */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 10px 12px;
+  background: #f9fbf9;
+  border: 1px solid #f0f4f0;
+  border-radius: 10px;
+  transition: background 0.15s, border-color 0.15s;
+  flex-wrap: wrap;     /* wraps on small screens */
+}
+/* Highlight urgent items with a left red border */
+.item-row.urgent {
+  border-left: 3px solid #ef4444;
+  background: #fff5f5;
+}
+.item-row:hover { background: #f0faf0; }
+
+/* Item name + meta tags */
+.item-info { flex: 1; min-width: 140px; }
+.item-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+.item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+/* Small tag chips */
+.tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: #e8ede8;
+  border-radius: 99px;
+  color: #3a4a3a;
+}
+.tag.muted { background: #f0f4f0; color: #7a8a7a; }
+.item-notes {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: #9aaa9a;
+}
+
+/* Expiry Badge (FR-3.5: color-coded) */
+.item-expiry { flex-shrink: 0; }
+.expiry-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+/* Action Buttons per row */
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.btn-action {
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: inherit;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: opacity 0.18s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-action:hover { opacity: 0.8; transform: translateY(-1px); }
+.btn-action:active { transform: scale(0.95); }
+
+.btn-action.edit   { background: #eff6ff; color: #3b82f6; }
+.btn-action.donate { background: #f0faf0; color: #2da12b; }
+.btn-action.used   { background: #f0fdf4; color: #16a34a; }
+.btn-action.plan   { background: #fffbeb; color: #d97706; }
+.btn-action.delete { background: #fef2f2; color: #ef4444; font-size: 0.85rem; padding: 5px 8px; }
+
+/* ── Primary & Secondary Buttons ── */
+.btn-primary {
+  background: #2da12b;
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-primary:hover { background: #25881f; transform: translateY(-1px); }
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  background: #f0f4f0;
+  color: #3a4a3a;
+  border: none;
+  padding: 9px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-secondary:hover { background: #e2e8e2; }
+
+.btn-donate {
+  background: #2da12b;
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-donate:hover { background: #25881f; }
+
+/* ── Modal Overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;                       /* top/right/bottom/left all = 0 */
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* ── Modal Box ── */
+.modal {
+  background: #fff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid #f0f4f0;
+}
+.modal-header h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+.modal-close {
+  background: #f0f4f0;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.modal-close:hover { background: #e2e8e2; }
+
+.modal-body {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 0.85rem 1.25rem 1.1rem;
+  border-top: 1px solid #f0f4f0;
+}
+
+/* ── Donate Preview Box ── */
+.donate-preview {
+  margin: 0 1.25rem;
+  padding: 10px 14px;
+  background: #f0faf0;
+  border: 1px solid #c6e8c5;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  color: #2a4a2a;
+  margin-top: 0.75rem;
+}
+
+/* ── Form Elements ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #3a4a3a;
+}
+.required { color: #ef4444; }
+.optional { font-size: 0.72rem; font-weight: 400; color: #9aaa9a; }
+
+.form-input {
+  padding: 9px 12px;
+  border: 1.5px solid #e8ede8;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #1a1a1a;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+  resize: vertical;
+}
+.form-input:focus { border-color: #2da12b; box-shadow: 0 0 0 3px rgba(45,161,43,0.1); }
+
+/* ── Validation Error Banner ── */
+.error-msg {
+  margin: 0.5rem 1.25rem 0;
+  padding: 9px 13px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* ── Toast Notification ── */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 11px 22px;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  z-index: 2000;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.toast.success { background: #2da12b; color: #fff; }
+.toast.info    { background: #3b82f6; color: #fff; }
+.toast.error   { background: #ef4444; color: #fff; }
+
+/* ── Vue Transition: Modal Fade ── */
+.fade-enter-active { transition: opacity 0.2s ease; }
+.fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* ── Vue Transition: Toast Slide Up ── */
+.slide-up-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.slide-up-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.slide-up-enter-from   { opacity: 0; transform: translateX(-50%) translateY(16px); }
+.slide-up-leave-to     { opacity: 0; transform: translateX(-50%) translateY(16px); }
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 860px) {
+  .inventory-page { padding: 1rem; gap: 1rem; }
+  .page-header h1 { font-size: 1.2rem; }
+  .cards-row { grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+  .item-row { gap: 0.5rem; }
+}
+
+@media (max-width: 600px) {
+  .cards-row { grid-template-columns: 1fr; }
+  .item-actions { gap: 0.3rem; }
+  .btn-action { padding: 5px 7px; font-size: 0.68rem; }
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
