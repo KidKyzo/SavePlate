@@ -31,18 +31,21 @@ const prefToggles = ref({
 })
 
 // ── Derived ──
+// Only show notifications whose type is enabled in preferences
 const filteredNotifications = computed(() => {
-  const list = activeFilter.value === 'all'
-    ? notifications.value
-    : notifications.value.filter(n => n.type === activeFilter.value)
+  let list = notifications.value.filter(n => prefToggles.value[n.type] !== false)
+  if (activeFilter.value !== 'all') {
+    list = list.filter(n => n.type === activeFilter.value)
+  }
   return list.slice(0, visibleCount.value)
 })
 
 const hasMore = computed(() => {
-  const total = activeFilter.value === 'all'
-    ? notifications.value.length
-    : notifications.value.filter(n => n.type === activeFilter.value).length
-  return visibleCount.value < total
+  let list = notifications.value.filter(n => prefToggles.value[n.type] !== false)
+  if (activeFilter.value !== 'all') {
+    list = list.filter(n => n.type === activeFilter.value)
+  }
+  return visibleCount.value < list.length
 })
 
 // ── Actions ──
