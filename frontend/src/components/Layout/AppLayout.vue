@@ -10,10 +10,10 @@ const emit = defineEmits(['navigate'])
 
 const navItems = [
   { id: 'dashboard',     label: 'Dashboard',    icon: '🏠' },
-  { id: 'notifications', label: 'Notifications', icon: '🔔' },
-  { id: 'meal-planner',  label: 'Meal Planner',  icon: '📅' },
   { id: 'inventory',     label: 'Inventory',     icon: '📦' },
+  { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'browse',        label: 'Browse Food',   icon: '🔍' },
+  { id: 'meal-planner',  label: 'Meal Planner',  icon: '📅' },
   { id: 'analytics',     label: 'Analytics',     icon: '📊' },
   { id: 'settings',      label: 'Settings',      icon: '⚙️' },
 ]

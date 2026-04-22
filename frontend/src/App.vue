@@ -7,7 +7,8 @@ import Inventory    from '@/components/Menu/Inventory.vue'
 import Notification from '@/components/Menu/Notification.vue'
 import MealPlanner  from '@/components/Menu/MealPlanner.vue'
 import BrowseFood   from '@/components/Menu/BrowseFood.vue'
-
+import Analytics    from '@/components/Menu/Analytics.vue'
+import Settings     from '@/components/Menu/Settings.vue'
 // Auth state
 const isLoggedIn  = ref(false)
 const currentPage = ref('dashboard')
@@ -34,6 +35,8 @@ function onRegister() {
     <Notification v-else-if="currentPage === 'notifications'" @navigate="currentPage = $event" />
     <MealPlanner  v-else-if="currentPage === 'meal-planner'"  @navigate="currentPage = $event" />
     <BrowseFood   v-else-if="currentPage === 'browse'"        @navigate="currentPage = $event" />
+    <Analytics    v-else-if="currentPage === 'analytics'"     @navigate="currentPage = $event" />
+    <Settings     v-else-if="currentPage === 'settings'"      @navigate="currentPage = $event" />
 
     <!-- Placeholder for pages not in Iteration 1 scope -->
     <div v-else class="placeholder-page">

@@ -326,6 +326,23 @@ function submitDonate() {
   closeDonateModal()
 }
 
+// ── CATEGORY ICON HELPER ──────────────────────────────────
+// Returns an emoji icon based on the item's category
+function categoryIcon(category) {
+  const map = {
+    Vegetables: '🥬',
+    Dairy:      '🥛',
+    Canned:     '🥫',
+    Frozen:     '🧊',
+    Bakery:     '🍞',
+    Fruits:     '🍎',
+    Protein:    '🥚',
+    Grains:     '🍚',
+    Other:      '📦',
+  }
+  return map[category] ?? '🍽️'
+}
+
 // ── ADD TO MEAL PLAN ──────────────────────────────────────
 // Simple: navigates to the Meal Planner page
 function addToPlan(item) {
@@ -401,77 +418,73 @@ function showToast(message, type = 'success') {
       </div>
 
       <!-- ══ INVENTORY LIST ════════════════════════════════ -->
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Inventory Items</h2>
-          <span class="item-count">{{ filteredItems.length }} item(s)</span>
-        </div>
+      <div class="panel-head">
+        <h2>Inventory Items</h2>
+        <span class="item-count">{{ filteredItems.length }} item(s)</span>
+      </div>
 
-        <!-- Empty state (NFR-US-4 / FR-4.5) -->
-        <div v-if="filteredItems.length === 0" class="empty-state">
-          <div class="empty-icon">🥡</div>
-          <p>No items found. Try adjusting your filters or add a new food item!</p>
-          <button class="btn-primary" @click="openAddModal">+ Add Food Item</button>
-        </div>
+      <!-- Empty state (NFR-US-4 / FR-4.5) -->
+      <div v-if="filteredItems.length === 0" class="empty-state">
+        <div class="empty-icon">🥡</div>
+        <p>No items found. Try adjusting your filters or add a new food item!</p>
+        <button class="btn-primary" @click="openAddModal">+ Add Food Item</button>
+      </div>
 
-        <!-- Item list -->
-        <div v-else class="item-list">
-          <div
-            v-for="item in filteredItems"
-            :key="item.id"
-            class="item-row"
-            :class="{ urgent: daysUntilExpiry(item.expiryDate) <= 2 }"
-          >
-            <!-- Item Info -->
-            <div class="item-info">
-              <div class="item-name">{{ item.name }}</div>
-              <div class="item-meta">
-                <span class="tag">{{ item.category }}</span>
-                <span class="tag">{{ item.quantity }}{{ item.unit }}</span>
-                <span v-if="item.storageLocation" class="tag muted">{{ item.storageLocation }}</span>
+      <!-- Item grid (matches BrowseFood card layout) -->
+      <div v-else class="food-grid">
+        <div
+          v-for="item in filteredItems"
+          :key="item.id"
+          class="food-card"
+          :class="{ urgent: daysUntilExpiry(item.expiryDate) <= 2 }"
+          :style="{ '--card-bg': getExpiryStatus(item.expiryDate).bgColor }"
+        >
+          <!-- Card top: icon + expiry badge -->
+          <div class="card-top" :style="{ background: getExpiryStatus(item.expiryDate).bgColor }">
+            <span class="food-icon">{{ categoryIcon(item.category) }}</span>
+            <span
+              class="urgency-chip"
+              :style="{
+                background: getExpiryStatus(item.expiryDate).color + '18',
+                color: getExpiryStatus(item.expiryDate).color,
+                borderColor: getExpiryStatus(item.expiryDate).color + '40'
+              }"
+            >{{ getExpiryStatus(item.expiryDate).label }}</span>
+          </div>
+
+          <!-- Card body -->
+          <div class="card-body">
+            <div class="card-category">{{ item.category }}</div>
+            <h3 class="card-name">{{ item.name }}</h3>
+
+            <div class="card-meta-list">
+              <div class="card-meta-row">
+                <span class="meta-icon">📦</span>
+                <span class="meta-text">{{ item.quantity }} {{ item.unit }}</span>
               </div>
-              <div v-if="item.notes" class="item-notes">📝 {{ item.notes }}</div>
+              <div v-if="item.storageLocation" class="card-meta-row">
+                <span class="meta-icon">🗄️</span>
+                <span class="meta-text">{{ item.storageLocation }}</span>
+              </div>
+              <div class="card-meta-row">
+                <span class="meta-icon">📅</span>
+                <span class="meta-text">Expires {{ item.expiryDate }}</span>
+              </div>
+              <div v-if="item.notes" class="card-meta-row">
+                <span class="meta-icon">📝</span>
+                <span class="meta-text">{{ item.notes }}</span>
+              </div>
             </div>
+          </div>
 
-            <!-- Expiry Badge (FR-3.5: color-coded) -->
-            <div class="item-expiry">
-              <span
-                class="expiry-badge"
-                :style="{
-                  color: getExpiryStatus(item.expiryDate).color,
-                  background: getExpiryStatus(item.expiryDate).bgColor
-                }"
-              >
-                {{ getExpiryStatus(item.expiryDate).label }}
-              </span>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="item-actions">
-              <!-- Edit Button -->
-              <button class="btn-action edit" @click="openEditModal(item)" :title="'Edit ' + item.name">
-                ✏️ Edit
-              </button>
-
-              <!-- Donate Button (FR-2.4) -->
-              <button class="btn-action donate" @click="openDonateModal(item)" :title="'Donate ' + item.name">
-                🤝 Donate
-              </button>
-
-              <!-- Mark as Used Button (FR-2.3) -->
-              <button class="btn-action used" @click="markAsUsed(item)" :title="'Mark ' + item.name + ' as used'">
-                ✅ Used
-              </button>
-
-              <!-- Add to Plan Button (UC6) -->
-              <button class="btn-action plan" @click="addToPlan(item)" :title="'Add ' + item.name + ' to meal plan'">
-                📅 Plan
-              </button>
-
-              <!-- Delete Button (FR-2.2) -->
-              <button class="btn-action delete" @click="deleteItem(item)" :title="'Delete ' + item.name">
-                🗑️
-              </button>
+          <!-- Card footer: action buttons -->
+          <div class="card-footer">
+            <div class="inv-actions">
+              <button class="btn-action edit" @click="openEditModal(item)" title="Edit">✏️ Edit</button>
+              <button class="btn-action donate" @click="openDonateModal(item)" title="Donate">🤝 Donate</button>
+              <button class="btn-action used" @click="markAsUsed(item)" title="Mark as used">✅ Used</button>
+              <button class="btn-action plan" @click="addToPlan(item)" title="Add to plan">📅 Plan</button>
+              <button class="btn-action delete" @click="deleteItem(item)" title="Delete">🗑️</button>
             </div>
           </div>
         </div>
@@ -871,78 +884,95 @@ function showToast(message, type = 'success') {
 .empty-icon { font-size: 2.5rem; }
 .empty-state p { font-size: 0.88rem; color: #7a8a7a; }
 
-/* ── Item List ── */
-.item-list {
+/* ── Food cards grid (matches BrowseFood) ── */
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.food-card {
+  background: #fff;
+  border: 1.5px solid #e8ede8;
+  border-radius: 16px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.food-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.09);
+  border-color: #c8dcc8;
+}
+.food-card.urgent {
+  border-left: 3px solid #ef4444;
 }
 
-/* ── Single Item Row ── */
-.item-row {
+.card-top {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 10px 12px;
-  background: #f9fbf9;
-  border: 1px solid #f0f4f0;
-  border-radius: 10px;
-  transition: background 0.15s, border-color 0.15s;
-  flex-wrap: wrap;     /* wraps on small screens */
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
 }
-/* Highlight urgent items with a left red border */
-.item-row.urgent {
-  border-left: 3px solid #ef4444;
-  background: #fff5f5;
-}
-.item-row:hover { background: #f0faf0; }
-
-/* Item name + meta tags */
-.item-info { flex: 1; min-width: 140px; }
-.item-name {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 4px;
-}
-.item-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-/* Small tag chips */
-.tag {
+.food-icon { font-size: 2rem; line-height: 1; }
+.urgency-chip {
   font-size: 0.68rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  background: #e8ede8;
-  border-radius: 99px;
-  color: #3a4a3a;
-}
-.tag.muted { background: #f0f4f0; color: #7a8a7a; }
-.item-notes {
-  margin-top: 4px;
-  font-size: 0.7rem;
-  color: #9aaa9a;
-}
-
-/* Expiry Badge (FR-3.5: color-coded) */
-.item-expiry { flex-shrink: 0; }
-.expiry-badge {
-  font-size: 0.72rem;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 99px;
+  border: 1px solid;
   white-space: nowrap;
 }
 
-/* Action Buttons per row */
-.item-actions {
+.card-body {
+  padding: 0 1rem 0.75rem;
+  flex: 1;
+}
+.card-category {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #2da12b;
+  margin-bottom: 4px;
+}
+.card-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 0.65rem;
+  line-height: 1.25;
+  background: none;
+  -webkit-text-fill-color: unset;
+}
+
+.card-meta-list {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.card-meta-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.meta-icon { font-size: 0.82rem; flex-shrink: 0; line-height: 1.5; }
+.meta-text {
+  font-size: 0.78rem;
+  color: #5a6a5a;
+  line-height: 1.45;
+}
+
+.card-footer {
+  padding: 0 1rem 1rem;
+}
+
+/* Action buttons inside inventory card */
+.inv-actions {
+  display: flex;
   flex-wrap: wrap;
+  gap: 0.35rem;
 }
 .btn-action {
   padding: 5px 10px;
@@ -1169,12 +1199,13 @@ label {
   .inventory-page { padding: 1rem; gap: 1rem; }
   .page-header h1 { font-size: 1.2rem; }
   .cards-row { grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
-  .item-row { gap: 0.5rem; }
+  .food-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
 }
 
 @media (max-width: 600px) {
   .cards-row { grid-template-columns: 1fr; }
-  .item-actions { gap: 0.3rem; }
+  .food-grid { grid-template-columns: 1fr; }
+  .inv-actions { gap: 0.3rem; }
   .btn-action { padding: 5px 7px; font-size: 0.68rem; }
   .form-row { grid-template-columns: 1fr; }
 }
