@@ -3,15 +3,21 @@ import { ref, computed } from 'vue'
 
 const emit = defineEmits(['go-login', 'register-success'])
 
-const fullName    = ref('')
-const email       = ref('')
-const password    = ref('')
-const confirmPass = ref('')
-const showPass    = ref(false)
-const showConfirm = ref(false)
-const isLoading   = ref(false)
+const fullName       = ref('')
+const email          = ref('')
+const password       = ref('')
+const confirmPass    = ref('')
+const householdSize  = ref('')   // optional
+const showPass       = ref(false)
+const showConfirm    = ref(false)
+const isLoading      = ref(false)
+const submitted      = ref(false) // tracks whether user tried to submit
 
-// Password strength
+// ── Email validation regex ──────────────────────────────────
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const emailValid = computed(() => emailRegex.test(email.value.trim()))
+
+// ── Password strength ───────────────────────────────────────
 const passwordStrength = computed(() => {
   const p = password.value
   if (!p) return 0
@@ -26,23 +32,55 @@ const passwordStrength = computed(() => {
 const strengthLabel = computed(() => ['', 'Weak', 'Fair', 'Good', 'Strong'][passwordStrength.value])
 const strengthColor = computed(() => ['', '#ef4444', '#f59e0b', '#3b82f6', '#22c55e'][passwordStrength.value])
 
+// ── Individual field error messages (shown after submit attempt) ──
+const nameError = computed(() =>
+  submitted.value && !fullName.value.trim() ? 'Full name is required.' : ''
+)
+const emailError = computed(() => {
+  if (!submitted.value) return ''
+  if (!email.value.trim()) return 'Email address is required.'
+  if (!emailValid.value)  return 'Please enter a valid email address.'
+  return ''
+})
+const passwordError = computed(() => {
+  if (!submitted.value) return ''
+  if (!password.value)            return 'Password is required.'
+  if (password.value.length < 8)  return 'Password must be at least 8 characters.'
+  if (!/[A-Z]/.test(password.value)) return 'Password must contain at least one uppercase letter.'
+  if (!/[0-9]/.test(password.value)) return 'Password must contain at least one number.'
+  return ''
+})
+const confirmError = computed(() =>
+  submitted.value && confirmPass.value !== password.value ? 'Passwords do not match.' : ''
+)
+
+// ── Password strength rule for formValid ───────────────────
+const passwordMeetsRules = computed(() =>
+  password.value.length >= 8 &&
+  /[A-Z]/.test(password.value) &&
+  /[0-9]/.test(password.value)
+)
+
+// ── Passwords match ─────────────────────────────────────────
 const passwordsMatch = computed(() =>
   confirmPass.value === '' || password.value === confirmPass.value
 )
 
+// ── Overall form validity ────────────────────────────────────
 const formValid = computed(() =>
   fullName.value.trim() !== '' &&
-  email.value.trim() !== '' &&
-  password.value.length >= 8 &&
-  passwordsMatch.value
+  emailValid.value &&
+  passwordMeetsRules.value &&
+  password.value === confirmPass.value
 )
 
 const handleRegister = async () => {
+  submitted.value = true
   if (!formValid.value) return
   isLoading.value = true
   await new Promise((r) => setTimeout(r, 1800))
   isLoading.value = false
-  // TODO: call register API — emitting success for prototype demo
+  // TODO: POST /api/auth/register — emitting success for prototype demo
   emit('register-success')
 }
 </script>
@@ -108,48 +146,51 @@ const handleRegister = async () => {
 
         <form @submit.prevent="handleRegister" novalidate>
 
-          <!-- Full Name -->
+          <!-- Full Name (required) -->
           <div class="field">
-            <label for="reg-name">Full Name</label>
+            <label for="reg-name">Full Name <span class="req">*</span></label>
             <input
               id="reg-name"
               type="text"
               v-model="fullName"
               placeholder="Your full name"
               autocomplete="name"
+              :class="{ 'input-error': nameError }"
             />
+            <p v-if="nameError" class="error-text">{{ nameError }}</p>
           </div>
 
-          <!-- Email -->
+          <!-- Email (required, regex validated) -->
           <div class="field">
-            <label for="reg-email">Email</label>
+            <label for="reg-email">Email <span class="req">*</span></label>
             <input
               id="reg-email"
               type="email"
               v-model="email"
               placeholder="your@email.com"
               autocomplete="email"
+              :class="{ 'input-error': emailError }"
             />
+            <p v-if="emailError" class="error-text">{{ emailError }}</p>
           </div>
 
-          <!-- Password -->
+          <!-- Password (required, min 8 chars, 1 uppercase, 1 number) -->
           <div class="field">
-            <label for="reg-password">Password</label>
+            <label for="reg-password">Password <span class="req">*</span></label>
             <div class="password-wrap">
               <input
                 id="reg-password"
                 :type="showPass ? 'text' : 'password'"
                 v-model="password"
-                placeholder="Min. 8 characters"
+                placeholder="Min. 8 chars, 1 uppercase, 1 number"
                 autocomplete="new-password"
+                :class="{ 'input-error': passwordError }"
               />
               <button type="button" class="toggle-btn" @click="showPass = !showPass" :aria-label="showPass ? 'Hide password' : 'Show password'">
-                <!-- Eye open -->
                 <svg v-if="!showPass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
-                <!-- Eye closed -->
                 <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
                   <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
@@ -167,11 +208,12 @@ const handleRegister = async () => {
               </div>
               <span class="strength-label" :style="{ color: strengthColor }">{{ strengthLabel }}</span>
             </div>
+            <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
           </div>
 
-          <!-- Confirm Password -->
+          <!-- Confirm Password (required) -->
           <div class="field">
-            <label for="reg-confirm">Confirm Password</label>
+            <label for="reg-confirm">Confirm Password <span class="req">*</span></label>
             <div class="password-wrap">
               <input
                 id="reg-confirm"
@@ -179,15 +221,13 @@ const handleRegister = async () => {
                 v-model="confirmPass"
                 placeholder="Repeat your password"
                 autocomplete="new-password"
-                :class="{ 'input-error': !passwordsMatch }"
+                :class="{ 'input-error': confirmError }"
               />
               <button type="button" class="toggle-btn" @click="showConfirm = !showConfirm" :aria-label="showConfirm ? 'Hide password' : 'Show password'">
-                <!-- Eye open -->
                 <svg v-if="!showConfirm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
-                <!-- Eye closed -->
                 <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
                   <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
@@ -195,10 +235,23 @@ const handleRegister = async () => {
                 </svg>
               </button>
             </div>
-            <p v-if="!passwordsMatch" class="error-text">Passwords do not match</p>
+            <p v-if="confirmError" class="error-text">{{ confirmError }}</p>
           </div>
 
-          <button type="submit" id="btn-register" class="btn-primary" :disabled="isLoading || !formValid">
+          <!-- Household Size (optional) -->
+          <div class="field">
+            <label for="reg-household">Household Size <span class="optional">(optional)</span></label>
+            <select id="reg-household" v-model="householdSize" class="select-input">
+              <option value="">— Select number of people —</option>
+              <option value="1">1 person (solo)</option>
+              <option value="2">2 people</option>
+              <option value="3">3 people</option>
+              <option value="4">4 people</option>
+              <option value="5+">5 or more</option>
+            </select>
+          </div>
+
+          <button type="submit" id="btn-register" class="btn-primary" :disabled="isLoading">
             {{ isLoading ? 'Creating account...' : 'Create Account' }}
           </button>
 
@@ -521,6 +574,30 @@ const handleRegister = async () => {
   font-size: 0.8rem;
   color: #ef4444;
   font-weight: 500;
+}
+
+/* ── Required / Optional labels ── */
+.req      { color: #ef4444; font-size: 0.8rem; }
+.optional { color: #94a3b8; font-size: 0.75rem; font-weight: 400; }
+
+/* ── Household size select ── */
+.select-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.select-input:focus {
+  border-color: #10b981;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
 }
 
 /* ── Buttons ── */
