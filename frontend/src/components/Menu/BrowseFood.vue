@@ -15,6 +15,7 @@ const searchQuery    = ref('')
 const filterCategory = ref('')   // '' | category label
 const filterSource   = ref('')   // '' | 'donation' | 'own'
 const filterExpiry   = ref('')   // '' | '1' | '3' | '7'
+const filterStorage  = ref('')   // '' | 'Fridge' | 'Freezer' | 'Pantry'
 const sortBy         = ref('expiry')
 
 // ── Category options (must match Inventory page) ──
@@ -37,7 +38,7 @@ let nextId = 200
 const allItems = ref([
   {
     id: 1, name: 'Homemade Banana Bread', qty: '1 loaf',
-    storageLocation: 'Counter (room temp)',
+    storageLocation: 'Counter (room temp)', storageType: 'Pantry',
     address: 'Jl. Sudirman No. 12, Jakarta',
     expiry: '2026-04-28', daysLeft: 6,
     category: 'Bakery', icon: '🍞', bg: '#fffbeb',
@@ -47,7 +48,7 @@ const allItems = ref([
   },
   {
     id: 2, name: 'Fresh Spinach Bunch', qty: '300g',
-    storageLocation: 'Refrigerator',
+    storageLocation: 'Refrigerator', storageType: 'Fridge',
     address: 'Jl. Kebon Jeruk No. 5, Jakarta',
     expiry: '2026-04-24', daysLeft: 2,
     category: 'Vegetables', icon: '🥬', bg: '#f0faf0',
@@ -57,7 +58,7 @@ const allItems = ref([
   },
   {
     id: 3, name: 'Greek Yogurt', qty: '2 cups (500g)',
-    storageLocation: 'Refrigerator',
+    storageLocation: 'Refrigerator', storageType: 'Fridge',
     address: 'Jl. Melawai Raya No. 8, Jakarta',
     expiry: '2026-04-25', daysLeft: 3,
     category: 'Dairy',      icon: '🥛', bg: '#eff6ff',
@@ -69,7 +70,7 @@ const allItems = ref([
   },
   {
     id: 4, name: 'Cooked White Rice', qty: '4 portions',
-    storageLocation: 'Counter (room temp)',
+    storageLocation: 'Counter (room temp)', storageType: 'Pantry',
     address: 'Jl. Cempaka Putih No. 3, Jakarta',
     expiry: '2026-04-23', daysLeft: 1,
     category: 'Other',     icon: '🍚', bg: '#f8f8f8',
@@ -79,7 +80,7 @@ const allItems = ref([
   },
   {
     id: 5, name: 'Ripe Mangoes', qty: '6 pieces',
-    storageLocation: 'Counter (room temp)',
+    storageLocation: 'Counter (room temp)', storageType: 'Pantry',
     address: 'Jl. Tebet Barat No. 20, Jakarta',
     expiry: '2026-04-25', daysLeft: 3,
     category: 'Other',     icon: '🥭', bg: '#f8f8f8',
@@ -89,7 +90,7 @@ const allItems = ref([
   },
   {
     id: 6, name: 'Chicken Egg (Free Range)', qty: '12 eggs',
-    storageLocation: 'Refrigerator',
+    storageLocation: 'Refrigerator', storageType: 'Fridge',
     address: 'Jl. Fatmawati No. 15, Jakarta',
     expiry: '2026-04-29', daysLeft: 7,
     category: 'Other', icon: '🥚', bg: '#f8f8f8',
@@ -100,7 +101,7 @@ const allItems = ref([
   // Own shared items also appear in browse (UC 1.2.1-11 — source: own inventory)
   {
     id: 101, name: 'Fresh Milk', qty: '1L',
-    storageLocation: 'Refrigerator',
+    storageLocation: 'Refrigerator', storageType: 'Fridge',
     address: 'My Home – Jl. Anggrek No. 7, Jakarta',
     expiry: '2026-04-24', daysLeft: 2,
     category: 'Dairy', icon: '🥛', bg: '#eff6ff',
@@ -163,7 +164,10 @@ const filteredItems = computed(() => {
     // Expiry filter
     const matchExpiry = !filterExpiry.value || item.daysLeft <= parseInt(filterExpiry.value)
 
-    return matchText && matchCat && matchSource && matchExpiry
+    // Storage type filter (UC 1.2.1-11)
+    const matchStorage = !filterStorage.value || item.storageType === filterStorage.value
+
+    return matchText && matchCat && matchSource && matchExpiry && matchStorage
   })
 
   if (sortBy.value === 'expiry') items = [...items].sort((a, b) => a.daysLeft - b.daysLeft)
@@ -172,7 +176,7 @@ const filteredItems = computed(() => {
 })
 
 const hasActiveFilters = computed(() =>
-  filterCategory.value || filterSource.value || filterExpiry.value || searchQuery.value
+  filterCategory.value || filterSource.value || filterExpiry.value || filterStorage.value || searchQuery.value
 )
 
 function clearFilters() {
@@ -180,6 +184,7 @@ function clearFilters() {
   filterCategory.value = ''
   filterSource.value   = ''
   filterExpiry.value   = ''
+  filterStorage.value  = ''
 }
 
 // ── Helpers ──
@@ -400,7 +405,7 @@ const selectedCatIcon = computed(() => {
       <!-- ── Page Header ── -->
       <div class="page-header">
         <div class="header-text">
-          <h1>🔍 Browse Food</h1>
+          <h1>Browse Food</h1>
           <p class="header-sub">Discover claimable food items near you</p>
         </div>
       </div>
@@ -465,6 +470,14 @@ const selectedCatIcon = computed(() => {
               <option value="name">Sort: Name (A–Z)</option>
             </select>
 
+            <!-- Storage type filter (UC 1.2.1-11) -->
+            <select id="filter-storage" v-model="filterStorage" class="form-input filter-select">
+              <option value="">Any Storage</option>
+              <option value="Fridge">Fridge</option>
+              <option value="Freezer">Freezer</option>
+              <option value="Pantry">Pantry</option>
+            </select>
+
             <!-- Clear filters -->
             <button v-if="hasActiveFilters" class="clear-filters-btn" @click="clearFilters">
               ✕ Clear Filters
@@ -524,6 +537,7 @@ const selectedCatIcon = computed(() => {
               <h3 class="card-name">{{ item.name }}</h3>
               <div class="card-meta-list">
                 <div class="card-meta-row"><span class="meta-icon">📦</span><span class="meta-text">{{ item.qty }}</span></div>
+                <div v-if="item.storageType" class="card-meta-row"><span class="meta-icon">🗄️</span><span class="meta-text">{{ item.storageType }}</span></div>
                 <div class="card-meta-row"><span class="meta-icon">📍</span><span class="meta-text address">{{ item.address }}</span></div>
                 <div class="card-meta-row"><span class="meta-icon">📅</span><span class="meta-text">Expires {{ item.expiry }}</span></div>
               </div>
@@ -604,10 +618,10 @@ const selectedCatIcon = computed(() => {
 
             <div class="card-footer" @click.stop>
               <div v-if="item.shared" class="shared-badge-row">
-                <div class="shared-badge">🤝 Shared</div>
+                <div class="shared-badge">Shared</div>
                 <button class="unshare-btn" @click="toggleShare(item)">Unshare</button>
               </div>
-              <button v-else class="share-btn" @click="toggleShare(item)">📤 Share for Claiming</button>
+              <button v-else class="share-btn" @click="toggleShare(item)">Share for Claiming</button>
             </div>
           </div>
         </div>
@@ -730,19 +744,6 @@ const selectedCatIcon = computed(() => {
                     <button class="action-btn action-btn--meal" @click="addToMealPlan(detailItem)">
                       <span class="action-btn-icon">📋</span>
                       <span>Add to Meal Plan</span>
-                    </button>
-                    <button class="action-btn action-btn--donate" @click="flagForDonation(detailItem)">
-                      <span class="action-btn-icon">📤</span>
-                      <span>Flag for Donation</span>
-                    </button>
-                    <!-- Share/Unshare -->
-                    <div v-if="detailItem.shared" class="shared-badge-row">
-                      <div class="shared-badge shared-badge--lg">🤝 Shared</div>
-                      <button class="unshare-btn" @click="toggleShare(detailItem)">Unshare</button>
-                    </div>
-                    <button v-else class="action-btn action-btn--share" @click="toggleShare(detailItem)">
-                      <span class="action-btn-icon">🤝</span>
-                      <span>Share for Claiming</span>
                     </button>
                   </div>
                 </template>
