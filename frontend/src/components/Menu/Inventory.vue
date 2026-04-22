@@ -105,9 +105,8 @@ function daysUntilExpiry(dateStr) {
 function getExpiryStatus(dateStr) {
   const days = daysUntilExpiry(dateStr)
   if (days < 0)  return { label: 'Expired',            color: '#dc2626', bgColor: '#fef2f2' }
-  if (days === 0) return { label: 'Expires Today',      color: '#dc2626', bgColor: '#fef2f2' }
-  if (days <= 2)  return { label: `${days}d left`,      color: '#ef4444', bgColor: '#fef2f2' }
-  if (days <= 5)  return { label: `${days}d left`,      color: '#f59e0b', bgColor: '#fffbeb' }
+  if (days === 0) return { label: 'Expires Today',      color: '#f59e0b', bgColor: '#fffbeb' }
+  if (days <= 3)  return { label: `${days}d left`,      color: '#f59e0b', bgColor: '#fffbeb' }
   return           { label: `${days}d left`,             color: '#22c55e', bgColor: '#f0fdf4' }
 }
 
@@ -125,12 +124,13 @@ const summaryCards = computed(() => {
 })
 
 // ── FILTER / SORT ─────────────────────────────────────────
-const sortOption     = ref('expiryDate')  // 'expiryDate' | 'name' | 'category'
+const sortOption     = ref('expiryDate')  // 'expiryDate' | 'name' | 'category' | 'dateAdded'
 const filterCategory = ref('All')         // 'All' or a specific category
+const filterStatus   = ref('available')   // 'available' | 'used'
 
-// Only show 'available' items in the main list (hide used/donated)
+// Only show items matching the selected status (active inventory or used history)
 const filteredItems = computed(() => {
-  let list = items.value.filter(i => i.status === 'available')
+  let list = items.value.filter(i => i.status === filterStatus.value)
 
   // Filter by category
   if (filterCategory.value !== 'All') {
@@ -142,6 +142,8 @@ const filteredItems = computed(() => {
     list = [...list].sort((a, b) => a.name.localeCompare(b.name))
   } else if (sortOption.value === 'category') {
     list = [...list].sort((a, b) => a.category.localeCompare(b.category))
+  } else if (sortOption.value === 'dateAdded') {
+    list = [...list].sort((a, b) => b.id - a.id) // Mock sorting by date added using ID descending
   } else {
     // Default: sort by soonest expiry first
     list = [...list].sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))
@@ -219,7 +221,7 @@ function submitAddItem() {
     status: 'available',
   })
 
-  showToast(`"${newItem.value.name}" added to inventory!`, 'success')
+  showToast('Food item added successfully.', 'success')
   closeAddModal()
 }
 
@@ -262,7 +264,7 @@ function submitEditItem() {
     items.value[idx] = { ...editItem.value }
   }
 
-  showToast(`"${editItem.value.name}" updated.`, 'success')
+  showToast('Food item updated successfully.', 'success')
   closeEditModal()
 }
 
@@ -272,21 +274,20 @@ function submitEditItem() {
 function markAsUsed(item) {
   if (!confirm(`Mark "${item.name}" as fully used? This will update your savings record.`)) return
   item.status = 'used'
-  showToast(`"${item.name}" marked as used. Great job! 🎉`, 'success')
+  showToast(`Great job! ${item.name} has been marked as used.`, 'success')
 }
 
 // ── DELETE ITEM ───────────────────────────────────────────
 // (FR-2.2) Removes the item from the list
 // In a real app: DELETE /api/items/:id
 function deleteItem(item) {
-  // Guard: block deletion if item is reserved for a meal plan (FR-2.5)
   if (item.status === 'reserved') {
-    alert(`'${item.name}' is reserved for your meal plan. Please remove it from the plan before deleting.`)
+    alert('This item is reserved for your meal plan. Please remove it from the plan before deleting.')
     return
   }
-  if (!confirm(`Remove "${item.name}" from your inventory? This cannot be undone.`)) return
+  if (!confirm(`Are you sure you want to remove ${item.name} from your inventory? This cannot be undone.`)) return
   items.value = items.value.filter(i => i.id !== item.id)
-  showToast(`"${item.name}" removed from inventory.`, 'info')
+  showToast('Item removed from inventory.', 'success')
 }
 
 // ── DONATE MODAL ──────────────────────────────────────────
@@ -322,16 +323,11 @@ function submitDonate() {
 
   // Update item status to 'donated' (removes it from active inventory view)
   donateTarget.value.status = 'donated'
-  showToast(`"${donateTarget.value.name}" has been listed for donation! 🤝`, 'success')
+  showToast('Your item has been listed for donation. Nearby users will be notified.', 'success')
   closeDonateModal()
 }
 
-// ── ADD TO MEAL PLAN ──────────────────────────────────────
-// Simple: navigates to the Meal Planner page
-function addToPlan(item) {
-  emit('navigate', 'meal-planner')
-  showToast(`Navigating to Meal Planner with "${item.name}".`, 'info')
-}
+
 
 // ── TOAST NOTIFICATION ────────────────────────────────────
 const toast         = ref({ show: false, message: '', type: 'success' })
@@ -380,6 +376,15 @@ function showToast(message, type = 'success') {
 
       <!-- ══ FILTER & SORT BAR ════════════════════════════ -->
       <div class="controls-bar">
+        <!-- Filter by Status -->
+        <div class="filter-group">
+          <span class="control-label">Status:</span>
+          <select v-model="filterStatus" class="select-control" id="filter-status">
+            <option value="available">Active Inventory</option>
+            <option value="used">Recently Used</option>
+          </select>
+        </div>
+
         <!-- Filter by category -->
         <div class="filter-group">
           <span class="control-label">Category:</span>
@@ -396,6 +401,7 @@ function showToast(message, type = 'success') {
             <option value="expiryDate">Expiry Date</option>
             <option value="name">Name</option>
             <option value="category">Category</option>
+            <option value="dateAdded">Date Added</option>
           </select>
         </div>
       </div>
@@ -448,25 +454,22 @@ function showToast(message, type = 'success') {
 
             <!-- Action Buttons -->
             <div class="item-actions">
-              <!-- Edit Button -->
-              <button class="btn-action edit" @click="openEditModal(item)" :title="'Edit ' + item.name">
-                ✏️ Edit
-              </button>
+              <template v-if="item.status === 'available'">
+                <!-- Edit Button -->
+                <button class="btn-action edit" @click="openEditModal(item)" :title="'Edit ' + item.name">
+                  ✏️ Edit
+                </button>
 
-              <!-- Donate Button (FR-2.4) -->
-              <button class="btn-action donate" @click="openDonateModal(item)" :title="'Donate ' + item.name">
-                🤝 Donate
-              </button>
+                <!-- Donate Button (FR-2.4) -->
+                <button class="btn-action donate" @click="openDonateModal(item)" :title="'Donate ' + item.name">
+                  🤝 Donate
+                </button>
 
-              <!-- Mark as Used Button (FR-2.3) -->
-              <button class="btn-action used" @click="markAsUsed(item)" :title="'Mark ' + item.name + ' as used'">
-                ✅ Used
-              </button>
-
-              <!-- Add to Plan Button (UC6) -->
-              <button class="btn-action plan" @click="addToPlan(item)" :title="'Add ' + item.name + ' to meal plan'">
-                📅 Plan
-              </button>
+                <!-- Mark as Used Button (FR-2.3) -->
+                <button class="btn-action used" @click="markAsUsed(item)" :title="'Mark ' + item.name + ' as used'">
+                  ✅ Used
+                </button>
+              </template>
 
               <!-- Delete Button (FR-2.2) -->
               <button class="btn-action delete" @click="deleteItem(item)" :title="'Delete ' + item.name">
@@ -555,11 +558,13 @@ function showToast(message, type = 'success') {
 
               <!-- Storage Location (optional) -->
               <div class="form-group">
-                <label for="add-storage">Storage Location <span class="optional">(optional)</span></label>
-                <select id="add-storage" v-model="newItem.storageLocation" class="form-input">
-                  <option value="">— Not specified —</option>
-                  <option v-for="loc in STORAGE_LOCATIONS" :key="loc" :value="loc">{{ loc }}</option>
-                </select>
+                <label>Storage Location <span class="optional">(optional)</span></label>
+                <div class="radio-group">
+                  <label v-for="loc in STORAGE_LOCATIONS" :key="loc" class="radio-label">
+                    <input type="radio" v-model="newItem.storageLocation" :value="loc" name="add-storage" />
+                    {{ loc }}
+                  </label>
+                </div>
               </div>
 
               <!-- Notes (optional) -->
@@ -639,11 +644,13 @@ function showToast(message, type = 'success') {
               </div>
 
               <div class="form-group">
-                <label for="edit-storage">Storage Location</label>
-                <select id="edit-storage" v-model="editItem.storageLocation" class="form-input">
-                  <option value="">— Not specified —</option>
-                  <option v-for="loc in STORAGE_LOCATIONS" :key="loc" :value="loc">{{ loc }}</option>
-                </select>
+                <label>Storage Location</label>
+                <div class="radio-group">
+                  <label v-for="loc in STORAGE_LOCATIONS" :key="loc" class="radio-label">
+                    <input type="radio" v-model="editItem.storageLocation" :value="loc" name="edit-storage" />
+                    {{ loc }}
+                  </label>
+                </div>
               </div>
 
               <div class="form-group">
@@ -961,7 +968,7 @@ function showToast(message, type = 'success') {
 .btn-action.edit   { background: #eff6ff; color: #3b82f6; }
 .btn-action.donate { background: #f0faf0; color: #2da12b; }
 .btn-action.used   { background: #f0fdf4; color: #16a34a; }
-.btn-action.plan   { background: #fffbeb; color: #d97706; }
+
 .btn-action.delete { background: #fef2f2; color: #ef4444; font-size: 0.85rem; padding: 5px 8px; }
 
 /* ── Primary & Secondary Buttons ── */
@@ -1120,6 +1127,28 @@ label {
   resize: vertical;
 }
 .form-input:focus { border-color: #2da12b; box-shadow: 0 0 0 3px rgba(45,161,43,0.1); }
+
+/* ── Radio Group for Storage Location ── */
+.radio-group {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 5px;
+}
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.radio-label input[type="radio"] {
+  accent-color: #2da12b;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
 
 /* ── Validation Error Banner ── */
 .error-msg {
