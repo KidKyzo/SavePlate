@@ -115,7 +115,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
                   <div v-if="!n.isRead" class="popup-dot"></div>
                 </div>
               </div>
-              <button class="popup-footer" @click="openNotifPage">View all notifications →</button>
+              <button class="popup-footer" @click="openNotifPage">View all notifications</button>
             </div>
           </Transition>
         </div>
@@ -144,7 +144,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
         <div class="panel">
           <div class="panel-head">
             <h2>⏰ Expiring Soon</h2>
-            <button class="link-btn" @click="emit('navigate', 'inventory')">View all →</button>
+            <button class="link-btn" @click="emit('navigate', 'inventory')">View all</button>
           </div>
           <div class="expiry-list">
             <div v-for="item in expiringItems" :key="item.name" class="expiry-row">
@@ -192,7 +192,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
       <div class="panel">
         <div class="panel-head">
           <h2>📋 Recent Activity</h2>
-          <button class="link-btn" @click="openNotifPage">See all →</button>
+          <button class="link-btn" @click="openNotifPage">See all</button>
         </div>
         <div class="activity-list">
           <div

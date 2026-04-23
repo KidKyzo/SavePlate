@@ -186,7 +186,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
             <!-- Footer -->
             <div class="sheet-footer">
               <button class="sheet-view-all" @click="viewAllNotifs">
-                View all notifications →
+                View all notifications
               </button>
               <button class="sheet-close" @click="closeMobilePopup">Close</button>
             </div>

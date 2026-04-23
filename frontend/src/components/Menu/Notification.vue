@@ -118,8 +118,8 @@ function savePreferences() {
           >
             <span>{{ cfg.icon }}</span>
             {{ cfg.label || 'All' }}
-            <span v-if="key === 'all'" class="tab-count">{{ notifications.length }}</span>
-            <span v-else class="tab-count">{{ notifications.filter(n => n.type === key).length }}</span>
+            <span v-if="key === 'all'" class="tab-count">{{ notifications.filter(n => !n.isRead).length }}</span>
+            <span v-else class="tab-count">{{ notifications.filter(n => n.type === key && !n.isRead).length }}</span>
           </button>
         </div>
       </div>
