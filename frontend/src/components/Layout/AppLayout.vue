@@ -272,7 +272,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 }
 
 .sidebar-logo {
-  padding: 1.5rem 1.25rem 1rem;
+  padding: 1.5rem 3.75rem 1rem;
   border-bottom: 1px solid #f0f4f0;
 }
 .sidebar-logo img { max-width: 140px; }

@@ -2,17 +2,17 @@
 import { ref, computed } from 'vue'
 import AppLayout from '@/components/Layout/AppLayout.vue'
 import { useNotifications } from '@/composables/useNotifications'
-import { useToast }         from '@/composables/useToast'
+import { useToast } from '@/composables/useToast'
 
 const emit = defineEmits(['navigate'])
 
 const { unreadCount } = useNotifications()
 const { showToast }   = useToast()
 
-// ── Tab state ──
+// ── Tab Navigation ──
 const activeTab = ref('browse') // 'browse' | 'inventory'
 
-// ── Filter state (UC 1.2.1-11) ──
+// ── Filters Section ──
 const searchQuery    = ref('')
 const filterCategory = ref('')   // '' | category label
 const filterSource   = ref('')   // '' | 'donation' | 'own'
@@ -20,7 +20,7 @@ const filterExpiry   = ref('')   // '' | '1' | '3' | '7'
 const filterStorage  = ref('')   // '' | 'Fridge' | 'Freezer' | 'Pantry'
 const sortBy         = ref('expiry')
 
-// ── Category options (must match Inventory page) ──
+// ── Categorization List ──
 const CATEGORIES = [
   { label: 'Vegetables', icon: '🥬', bg: '#f0faf0' },
   { label: 'Dairy',      icon: '🥛', bg: '#eff6ff' },
@@ -30,10 +30,9 @@ const CATEGORIES = [
   { label: 'Other',      icon: '🍱', bg: '#f8f8f8' },
 ]
 
-// ── Current user (simulated logged-in user) ──
+// ── Demo User ──
 const CURRENT_USER = 'Adrienne Kayana'
 
-// ── Helper: compute days remaining from an ISO date string ──
 function computeDaysLeft(expiryDateStr) {
   if (!expiryDateStr) return 0
   const today  = new Date()
@@ -45,11 +44,7 @@ function computeDaysLeft(expiryDateStr) {
 
 let nextId = 200
 
-// ─────────────────────────────────────────────────
-// ── DATA — Community donation + shared items (Browse tab)
-// item.status: 'available' | 'reserved' | 'claimed'
-// item.source: 'donation' | 'own'
-// ─────────────────────────────────────────────────
+// ── Dummy Data Donated & Claimable Food 
 const allItems = ref([
   {
     id: 1, name: 'Homemade Banana Bread', qty: '1 loaf',
@@ -113,7 +108,7 @@ const allItems = ref([
     status: 'available',
     notes: 'Free-range eggs from local farm.',
   },
-  // Own shared items also appear in browse (UC 1.2.1-11 — source: own inventory)
+  // Dummy Data Shared Item from Inventory
   {
     id: 101, name: 'Fresh Milk', qty: '1L',
     storageLocation: 'Refrigerator', storageType: 'Fridge',
@@ -126,9 +121,8 @@ const allItems = ref([
   },
 ])
 
-// ─────────────────────────────────────────────────
-// ── DATA — My inventory (Inventory tab)
-// ─────────────────────────────────────────────────
+// Dummy Data - My Inventory Section
+
 const myInventory = ref([
   {
     id: 201, name: 'Fresh Milk', qty: '1L',
@@ -159,9 +153,7 @@ const myInventory = ref([
   },
 ])
 
-// ─────────────────────────────────────────────────
-// ── COMPUTED — Filtered browse items (UC 1.2.1-11)
-// ─────────────────────────────────────────────────
+// ── Filtering Items
 const filteredItems = computed(() => {
   let items = allItems.value.filter(item => {
     // Text search
@@ -228,9 +220,7 @@ function claimItem(item) {
   }, 800)
 }
 
-// ─────────────────────────────────────────────────
-// ── DETAIL MODAL (UC 1.2.1-12)
-// ─────────────────────────────────────────────────
+// ── Item Detail Card
 const detailItem    = ref(null)
 const detailContext = ref('browse') // 'browse' | 'inventory'
 
@@ -253,9 +243,7 @@ function closeDetail() {
   confirmMsg.value = ''
 }
 
-// UC 1.2.1-12 contextual actions ──
 function markAsUsed(item) {
-  // Remove from inventory (it's been consumed)
   const idx = myInventory.value.findIndex(i => i.id === item.id)
   if (idx !== -1) myInventory.value.splice(idx, 1)
   showConfirm('✅ Item marked as used and removed from your inventory.')
@@ -263,10 +251,8 @@ function markAsUsed(item) {
 }
 
 function flagForDonation(item) {
-  // Mark as shared so it appears in browse as a donation
   const idx = myInventory.value.findIndex(i => i.id === item.id)
   if (idx !== -1) myInventory.value[idx] = { ...myInventory.value[idx], shared: true }
-  // Also push to allItems as a donation
   const exists = allItems.value.some(i => i.id === item.id)
   if (!exists) {
     allItems.value.unshift({
@@ -279,13 +265,10 @@ function flagForDonation(item) {
 }
 
 function addToMealPlan(item) {
-  // Placeholder — would navigate to meal plan feature
   showConfirm(`📋 "${item.name}" has been added to your meal plan.`)
 }
 
-// ─────────────────────────────────────────────────
-// ── CLAIM CONFIRMATION MODAL (UC 1.2.1-13)
-// ─────────────────────────────────────────────────
+// ── Claim Confirmation Pop Up
 const showClaimModal   = ref(false)
 const claimTargetItem  = ref(null)
 const claimPickupTime  = ref('')
@@ -333,7 +316,7 @@ function submitClaim() {
   claimSubmitted.value = true
 }
 
-// UC 1.2.1-13: Cancel claim before pickup
+// Cancel Claim
 function cancelClaim(item) {
   const idx = allItems.value.findIndex(i => i.id === item.id)
   if (idx !== -1) {
@@ -351,9 +334,7 @@ function cancelClaim(item) {
   showConfirm('↩️ Your claim has been cancelled. The item is now available again.')
 }
 
-// ─────────────────────────────────────────────────
-// ── SHARE TOGGLE (Inventory)
-// ─────────────────────────────────────────────────
+// ── Share Toggle (Inventory)
 function toggleShare(item) {
   item.shared = !item.shared
   showToast(
@@ -363,9 +344,6 @@ function toggleShare(item) {
   )
 }
 
-// ─────────────────────────────────────────────────
-// ── CREATE ITEM MODAL
-// ─────────────────────────────────────────────────
 const showCreateModal = ref(false)
 const createErrors    = ref({})
 
@@ -540,7 +518,7 @@ const selectedCatIcon = computed(() => {
               <div class="card-top-badges">
                 <!-- Source badge (UC 1.2.1-11) -->
                 <span class="source-chip" :class="item.source === 'own' ? 'source-own' : 'source-donation'">
-                  {{ item.source === 'own' ? '🏠 Mine' : '🤝 Donation' }}
+                  {{ item.source === 'own' ? 'My Listing' : 'Donation' }}
                 </span>
                 <span
                   class="urgency-chip"
@@ -568,7 +546,7 @@ const selectedCatIcon = computed(() => {
             <div class="card-footer" @click.stop>
               <!-- Reserved by current user: show cancel -->
               <div v-if="item.status === 'reserved' && item.claimedBy === CURRENT_USER" class="reserved-row">
-                <div class="reserved-badge">🔒 Reserved by You</div>
+                <div class="reserved-badge">Reserved by You</div>
                 <button class="cancel-claim-btn" @click="cancelClaim(item)">Cancel</button>
               </div>
               <!-- Reserved by someone else -->
@@ -580,10 +558,10 @@ const selectedCatIcon = computed(() => {
                 v-else-if="item.status === 'available' && item.source !== 'own'"
                 class="claim-btn"
                 @click="openClaimModal(item)"
-              >✅ Request / Claim Item</button>
+              >Request / Claim Item</button>
               <!-- My own item -->
               <div v-else-if="item.source === 'own'" class="own-badge">
-                🏠 Your listing
+                My Listing
               </div>
             </div>
           </div>
@@ -642,13 +620,9 @@ const selectedCatIcon = computed(() => {
                 <div class="shared-badge">Shared</div>
                 <button class="unshare-btn" @click="toggleShare(item)">Unshare</button>
               </div>
-              <button v-else class="share-btn" @click="toggleShare(item)">Share for Claiming</button>
+              <button v-else class="share-btn" @click="toggleShare(item)">Share for Donation</button>
             </div>
           </div>
-        </div>
-
-        <div class="add-item-cta">
-          <button class="add-btn" @click="openCreate">➕ Add Item to Inventory</button>
         </div>
       </template>
 
@@ -677,7 +651,7 @@ const selectedCatIcon = computed(() => {
                     }"
                   >{{ urgencyLabel(detailItem.daysLeft) }}</span>
                   <span v-if="detailItem.source" class="source-chip" :class="detailItem.source === 'own' ? 'source-own' : 'source-donation'">
-                    {{ detailItem.source === 'own' ? '🏠 Own Inventory' : '🤝 Donation Listing' }}
+                    {{ detailItem.source === 'own' ? 'My Inventory' : 'Donation Listing' }}
                   </span>
                 </div>
                 <div class="detail-category">{{ detailItem.category }}</div>
@@ -735,22 +709,22 @@ const selectedCatIcon = computed(() => {
                     v-if="detailItem.status === 'available' && detailItem.source !== 'own'"
                     class="claim-btn claim-btn--lg"
                     @click="openClaimModal(detailItem)"
-                  >✅ Request / Claim Item</button>
+                  >Request / Claim Item</button>
 
                   <!-- Reserved by me: cancel (UC 1.2.1-13) -->
                   <div v-else-if="detailItem.status === 'reserved' && detailItem.claimedBy === CURRENT_USER" class="two-btn-row">
-                    <div class="reserved-badge reserved-badge--lg">🔒 Reserved by You</div>
+                    <div class="reserved-badge reserved-badge--lg">Reserved by You</div>
                     <button class="cancel-claim-btn cancel-claim-btn--lg" @click="cancelClaim(detailItem)">↩️ Cancel Claim</button>
                   </div>
 
                   <!-- Reserved by someone else -->
                   <div v-else-if="detailItem.status === 'reserved'" class="reserved-badge reserved-badge--lg">
-                    🔒 Currently Reserved
+                    Currently Reserved
                   </div>
 
                   <!-- My own listing in browse -->
                   <div v-else-if="detailItem.source === 'own'" class="own-badge own-badge--lg">
-                    🏠 This is your listing
+                    This is your listing
                   </div>
                 </template>
 
@@ -853,7 +827,7 @@ const selectedCatIcon = computed(() => {
                 <div class="create-actions">
                   <button type="button" class="detail-close-btn cancel-width" @click="closeClaimModal">Cancel</button>
                   <button type="button" class="claim-btn claim-btn--lg" style="flex:1;" @click="submitClaim">
-                    ✅ Confirm Claim Request
+                    Confirm Claim Request
                   </button>
                 </div>
               </div>
@@ -927,7 +901,7 @@ const selectedCatIcon = computed(() => {
 
                 <div class="create-actions">
                   <button type="button" class="detail-close-btn cancel-width" @click="closeCreate">Cancel</button>
-                  <button type="submit" class="claim-btn claim-btn--lg" style="flex:1;">✅ Add Item</button>
+                  <button type="submit" class="claim-btn claim-btn--lg" style="flex:1;">Add Item</button>
                 </div>
               </form>
             </div>

@@ -322,10 +322,13 @@ function doLogout()      { emit('navigate', 'logout') }
 /* ── Page header ── */
 .page-header { margin-bottom: 0.25rem; }
 .page-header h1 {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: #1a1a1a;
-  margin-bottom: 4px;
+  background: none;
+  -webkit-text-fill-color: unset;
+  margin-bottom: 3px;
+  line-height: 1.2;
 }
 .subtitle { font-size: 0.85rem; color: #7a8a7a; }
 
