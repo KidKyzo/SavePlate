@@ -226,7 +226,7 @@ function submitAddItem() {
     status: 'available',
   })
 
-  showToast('Food item added successfully.', 'success')
+  showToast('Food item added successfully', 'success')
   closeAddModal()
 }
 
@@ -269,7 +269,7 @@ function submitEditItem() {
     items.value[idx] = { ...editItem.value }
   }
 
-  showToast('Food item updated successfully.', 'success')
+  showToast('Food item updated successfully', 'success')
   closeEditModal()
 }
 
@@ -279,7 +279,7 @@ function submitEditItem() {
 function markAsUsed(item) {
   if (!confirm(`Mark "${item.name}" as fully used? This will update your savings record.`)) return
   item.status = 'used'
-  showToast(`Great job! ${item.name} has been marked as used.`, 'success')
+  showToast(`${item.name} has been marked as used`, 'success')
 }
 
 // ── DELETE ITEM ───────────────────────────────────────────
@@ -292,7 +292,7 @@ function deleteItem(item) {
   }
   if (!confirm(`Are you sure you want to remove ${item.name} from your inventory? This cannot be undone.`)) return
   items.value = items.value.filter(i => i.id !== item.id)
-  showToast('Item removed from inventory.', 'success')
+  showToast(`${item.name} has been removed from inventory`, 'success')
 }
 
 // ── DONATE MODAL ──────────────────────────────────────────
@@ -328,7 +328,7 @@ function submitDonate() {
 
   // Update item status to 'donated' (removes it from active inventory view)
   donateTarget.value.status = 'donated'
-  showToast('Your item has been listed for donation. Nearby users will be notified.', 'success')
+  showToast(`${donateTarget.value.name} has been listed for donation. Nearby users will be notified`, 'success')
   closeDonateModal()
 }
 
@@ -358,7 +358,7 @@ function canDonate(item) {
 </script>
 
 <template>
-  <AppLayout current-page="inventory" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="inventory" :unread-count="unreadCount" user-name="John Doe" @navigate="emit('navigate', $event)">
     <div class="inventory-page">
 
       <!-- ══ PAGE HEADER ══════════════════════════════════ -->
@@ -1207,25 +1207,6 @@ label {
   font-weight: 600;
 }
 
-/* ── Toast Notification ── */
-.toast {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 11px 22px;
-  border-radius: 99px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  font-family: inherit;
-  z-index: 2000;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
-  white-space: nowrap;
-  pointer-events: none;
-}
-.toast.success { background: #2da12b; color: #fff; }
-.toast.info    { background: #3b82f6; color: #fff; }
-.toast.error   { background: #ef4444; color: #fff; }
 
 /* ── Vue Transition: Modal Fade ── */
 .fade-enter-active { transition: opacity 0.2s ease; }
@@ -1253,4 +1234,6 @@ label {
   .btn-action { padding: 5px 7px; font-size: 0.68rem; }
   .form-row { grid-template-columns: 1fr; }
 }
+
+
 </style>

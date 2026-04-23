@@ -53,14 +53,14 @@ function markRead(id) {
   const n = notifications.value.find(n => n.id === id)
   if (n && !n.isRead) {
     markReadShared(id)
-    showToast('Notification marked as read', 'notification', '🔔')
+    showToast('Notification marked as read', 'notification')
   }
 }
 
 function markAllRead() {
   const hadUnread = unreadCount.value > 0
   markAllReadShared()
-  if (hadUnread) showToast('All notifications marked as read', 'success', '✓')
+  if (hadUnread) showToast('All notifications marked as read', 'success')
 }
 
 function clickNotification(n) {
@@ -79,12 +79,12 @@ function setFilter(f) {
 
 function savePreferences() {
   showPrefModal.value = false
-  showToast('Notification preferences saved', 'success', '⚙️')
+  showToast('Notification preferences saved', 'success')
 }
 </script>
 
 <template>
-  <AppLayout current-page="notifications" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="notifications" :unread-count="unreadCount" user-name="John Doe" @navigate="emit('navigate', $event)">
 
     <div class="notif-page">
 
@@ -95,15 +95,14 @@ function savePreferences() {
             <h1>Notification Centre</h1>
             <p class="notif-sub">
               <span v-if="unreadCount > 0">{{ unreadCount }} unread notification{{ unreadCount !== 1 ? 's' : '' }}</span>
-              <span v-else class="all-read">All caught up ✓</span>
             </p>
           </div>
           <div class="header-actions">
             <button class="btn-outline" :disabled="unreadCount === 0" @click="markAllRead">
-              ✓ Mark all read
+              Mark all read
             </button>
             <button class="btn-outline" @click="showPrefModal = true">
-              ⚙️ Preferences
+              Preferences
             </button>
           </div>
         </div>
@@ -111,7 +110,7 @@ function savePreferences() {
         <!-- Filter tabs -->
         <div class="filter-tabs">
           <button
-            v-for="(cfg, key) in { all: { label: 'All', icon: '🔔' }, ...TYPE_CONFIG }"
+            v-for="(cfg, key) in { all: { label: 'All'}, ...TYPE_CONFIG }"
             :key="key"
             class="filter-tab"
             :class="{ active: activeFilter === key }"
@@ -129,7 +128,6 @@ function savePreferences() {
       <div class="notif-list">
 
         <div v-if="filteredNotifications.length === 0" class="empty-state">
-          <div class="empty-icon">🔔</div>
           <p>No notifications yet.<br/>Your alerts will appear here.</p>
         </div>
 

@@ -31,7 +31,7 @@ const CATEGORIES = [
 ]
 
 // ── Demo User ──
-const CURRENT_USER = 'Adrienne Kayana'
+const CURRENT_USER = 'John Doe'
 
 function computeDaysLeft(expiryDateStr) {
   if (!expiryDateStr) return 0
@@ -398,7 +398,7 @@ const selectedCatIcon = computed(() => {
 </script>
 
 <template>
-  <AppLayout current-page="browse" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="browse" :unread-count="unreadCount" user-name="John Doe" @navigate="emit('navigate', $event)">
     <div class="browse-page">
 
       <!-- ── Page Header ── -->

@@ -77,7 +77,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 </script>
 
 <template>
-  <AppLayout current-page="dashboard" :unread-count="unreadCount" user-name="Adrienne Kayana" @navigate="emit('navigate', $event)">
+  <AppLayout current-page="dashboard" :unread-count="unreadCount" user-name="John Doe" @navigate="emit('navigate', $event)">
     <div class="dashboard">
 
       <!-- ── Header ── -->

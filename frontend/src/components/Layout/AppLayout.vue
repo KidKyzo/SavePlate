@@ -26,7 +26,7 @@ const navItems = [
   { id: 'settings',      label: 'Settings',      icon: '⚙️' },
 ]
 
-// Mobile bottom tabs: prioritised order
+// Mobile bottom tabs
 const bottomNavItems = [
   { id: 'inventory',     label: 'Inventory',     icon: '📦' },
   { id: 'meal-planner',  label: 'Meal Planner',  icon: '📅' },

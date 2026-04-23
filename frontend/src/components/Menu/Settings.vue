@@ -9,10 +9,10 @@ const emit = defineEmits(['navigate'])
 const { showToast } = useToast()
 const { unreadCount } = useNotifications()
 
-const userName = ref('Adrienne Kayana')
+const userName = ref('John Doe')
 
 // ── Account Information ──
-const userEmail = ref('adrienne@example.com')
+const userEmail = ref('john.doe@example.com')
 const editMode  = ref(false)
 const editName  = ref(userName.value)
 const editEmail = ref(userEmail.value)
@@ -26,7 +26,7 @@ function saveEdit() {
   userName.value  = editName.value
   userEmail.value = editEmail.value
   editMode.value  = false
-  showToast('Profile updated successfully', 'success', '👤')
+  showToast('Profile updated successfully', 'success')
 }
 function cancelEdit() {
   editMode.value = false
@@ -39,8 +39,7 @@ function toggle2FA() {
   twoFactorEnabled.value = !twoFactorEnabled.value
   showToast(
     twoFactorEnabled.value ? '2FA enabled — your account is more secure' : '2FA disabled',
-    twoFactorEnabled.value ? 'success' : 'warning',
-    '🔐'
+    twoFactorEnabled.value ? 'success' : 'warning'
   )
 }
 
@@ -53,7 +52,7 @@ const visibilityOptions = ref([
 
 function toggleVisibility(opt) {
   opt.enabled = !opt.enabled
-  showToast(`${opt.label} ${opt.enabled ? 'enabled' : 'disabled'}`, opt.enabled ? 'info' : 'warning', '👁️')
+  showToast(`${opt.label} ${opt.enabled ? 'enabled' : 'disabled'}`, opt.enabled ? 'info' : 'warning')
 }
 
 // ── Notification Settings ──
@@ -66,7 +65,7 @@ const notifOptions = ref([
 
 function toggleNotif(opt) {
   opt.enabled = !opt.enabled
-  showToast(`${opt.label} ${opt.enabled ? 'enabled' : 'disabled'}`, opt.enabled ? 'notification' : 'warning', '🔔')
+  showToast(`${opt.label} ${opt.enabled ? 'enabled' : 'disabled'}`, opt.enabled ? 'notification' : 'warning')
 }
 
 // ── Logout ──
