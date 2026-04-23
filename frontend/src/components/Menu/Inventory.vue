@@ -348,6 +348,13 @@ function categoryIcon(category) {
   }
   return map[category] ?? '🍽️'
 }
+
+// ── DONATE ELIGIBILITY (UC2 – item nearing expiry) ────────
+// Only items expiring within 7 days can be converted to donation
+const DONATE_THRESHOLD_DAYS = 7
+function canDonate(item) {
+  return daysUntilExpiry(item.expiryDate) <= DONATE_THRESHOLD_DAYS
+}
 </script>
 
 <template>
@@ -357,7 +364,7 @@ function categoryIcon(category) {
       <!-- ══ PAGE HEADER ══════════════════════════════════ -->
       <div class="page-header">
         <div class="header-text">
-          <h1>📦 Food Inventory</h1>
+          <h1>Food Inventory</h1>
           <p class="sub">Manage your household food items</p>
         </div>
         <!-- Primary action: Add a new food item (FR-2.1) -->
@@ -479,11 +486,20 @@ function categoryIcon(category) {
           <!-- Card footer: action buttons -->
           <div class="card-footer">
             <div class="inv-actions">
-              <button class="btn-action edit" @click="openEditModal(item)" title="Edit">✏️ Edit</button>
-              <button class="btn-action donate" @click="openDonateModal(item)" title="Donate">🤝 Donate</button>
-              <button class="btn-action used" @click="markAsUsed(item)" title="Mark as used">✅ Used</button>
-              <button class="btn-action delete" @click="deleteItem(item)" title="Delete">🗑️</button>
+              <button class="btn-action edit" @click="openEditModal(item)" title="Edit">Edit</button>
+              <button
+                class="btn-action donate"
+                :class="{ 'btn-disabled': !canDonate(item) }"
+                :disabled="!canDonate(item)"
+                :title="canDonate(item) ? 'Convert to Donation' : 'Can only donate items expiring within 7 days'"
+                @click="canDonate(item) && openDonateModal(item)"
+              >Donate</button>
+              <button class="btn-action used" @click="markAsUsed(item)" title="Mark as used">Mark as Used</button>
+              <button class="btn-action delete" @click="deleteItem(item)" title="Delete">Delete</button>
             </div>
+            <p v-if="!canDonate(item)" class="donate-hint">
+              Donate unlocks when ≤ 7 days to expiry
+            </p>
           </div>
         </div>
       </div>
@@ -956,6 +972,24 @@ function categoryIcon(category) {
   padding: 0 1rem 1rem;
 }
 
+/* Donate hint text */
+.donate-hint {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+/* Disabled donate button */
+.btn-action.btn-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.btn-action.btn-disabled:hover {
+  opacity: 0.35;
+  transform: none;
+}
+
 /* Action buttons inside inventory card */
 .inv-actions {
   display: flex;
@@ -977,7 +1011,7 @@ function categoryIcon(category) {
 .btn-action:active { transform: scale(0.95); }
 
 .btn-action.edit   { background: #eff6ff; color: #3b82f6; }
-.btn-action.donate { background: #f0faf0; color: #2da12b; }
+.btn-action.donate { background: #f0faf0; color: #43c73a; }
 .btn-action.used   { background: #f0fdf4; color: #16a34a; }
 
 .btn-action.delete { background: #fef2f2; color: #ef4444; font-size: 0.85rem; padding: 5px 8px; }
