@@ -170,9 +170,9 @@ function createEmptyItem() {
   return {
     name: '',
     category: '',
-    quantity: '',
+    quantity: 1,
     unit: 'pcs',
-    expiryDate: '',
+    expiryDate: getTodayString(),
     storageLocation: '',
     notes: '',
   }
@@ -553,7 +553,7 @@ function canDonate(item) {
                   <label for="add-qty">Quantity <span class="required">*</span></label>
                   <input
                     id="add-qty"
-                    v-model="newItem.quantity"
+                    v-model.number="newItem.quantity"
                     type="number"
                     min="1"
                     placeholder="e.g. 200"
@@ -646,7 +646,7 @@ function canDonate(item) {
               <div class="form-row">
                 <div class="form-group">
                   <label for="edit-qty">Quantity <span class="required">*</span></label>
-                  <input id="edit-qty" v-model="editItem.quantity" type="number" min="1" class="form-input" />
+                  <input id="edit-qty" v-model.number="editItem.quantity" type="number" min="1" class="form-input" />
                 </div>
                 <div class="form-group">
                   <label for="edit-unit">Unit</label>
